@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>製作工坊素材樹</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <p class="eyebrow">FFXIV · 繁中 TC</p>
+      <h1>製作工坊素材樹</h1>
+    </div>
+    <p class="lede" id="lede">左邊是成品。每往右一欄，少一次合成。最右邊是採集、兌換或其他基礎素材，數量已合併，直接照這一欄準備。一般製作和公會合建都能搜。</p>
+  </header>
+
+  <div class="layout">
+    <aside class="side">
+      <form id="search-form" class="search" autocomplete="off">
+        <label for="query">搜尋成品或素材</label>
+        <div class="search-row">
+          <input id="query" type="search" placeholder="輸入繁中名稱" enterkeyhint="search">
+          <label class="qty-label">數量
+            <input id="qty" type="number" min="1" max="9999" value="1">
+          </label>
+          <button type="submit" id="add-btn">加入</button>
+        </div>
+        <ul id="results" class="results" hidden></ul>
+      </form>
+
+      <section class="list-panel">
+        <div id="list-tabs" class="list-tabs"></div>
+        <label class="list-name" for="list-name">清單名稱
+          <input id="list-name" type="text" maxlength="24" autocomplete="off" placeholder="替這張清單取名">
+        </label>
+        <div class="panel-head">
+          <h2>製作清單</h2>
+          <button type="button" id="clear-btn" class="text-btn">清空這張</button>
+        </div>
+        <ul id="target-list" class="target-list"></ul>
+        <p id="list-empty" class="hint">還沒有項目。搜尋後加入，樹就會從左邊的成品排到右邊的基礎素材。</p>
+      </section>
+
+      <section class="detail" id="detail" hidden>
+        <h2>這一格</h2>
+        <p id="detail-body"></p>
+      </section>
+
+      <p class="footnote" id="footnote"></p>
+    </aside>
+
+    <main class="stage">
+      <div class="stage-bar">
+        <p id="stage-note">同一種素材只佔一格，顯示的是整張清單加總後的數量。勾選表示這項已經蒐集完成。點一下素材卡，右邊會列出採集點、兌換和航行海域。</p>
+        <div class="stage-actions">
+          <label class="check" title="隱藏風、火、冰、土、雷、水的碎晶、水晶、晶簇，以及無屬性水晶。寶石不會被藏起來。">
+            <input type="checkbox" id="hide-crystals"> 隱藏水晶
+          </label>
+          <label class="market-pick" title="繁中服陸行鳥。選整個資料中心時，顯示八個伺服器裡目前最便宜的掛牌。">
+            伺服器
+            <select id="market-world" aria-label="市場板伺服器">
+              <option value="陸行鳥">陸行鳥（全資料中心最低）</option>
+              <option value="伊弗利特">伊弗利特</option>
+              <option value="迦樓羅">迦樓羅</option>
+              <option value="利維坦">利維坦</option>
+              <option value="鳳凰">鳳凰</option>
+              <option value="奧汀">奧汀</option>
+              <option value="巴哈姆特">巴哈姆特</option>
+              <option value="拉姆">拉姆</option>
+              <option value="泰坦">泰坦</option>
+            </select>
+          </label>
+          <button type="button" id="market-btn" class="text-btn" title="向 Universalis 查目前最低掛牌。這是單價，一次買齊所需數量時，後面的單子可能更貴。">查市場價</button>
+          <button type="button" id="copy-material-names" class="text-btn" title="只複製尚未蒐集的素材名稱，一行一個">複製素材名稱</button>
+          <button type="button" id="copy-recipe-names" class="text-btn" title="只複製還沒做完的配方名稱，一行一個">複製配方名稱</button>
+          <button type="button" id="jump-base" class="text-btn">看到最右欄</button>
+        </div>
+      </div>
+      <div class="stage-main">
+        <div id="board-scroll" class="board-scroll">
+          <div id="board" class="board"></div>
+        </div>
+        <aside id="source" class="source" hidden>
+          <div class="source-head">
+            <h2 id="source-title">來源</h2>
+            <span class="source-tools">
+              <button type="button" id="source-copy" class="text-btn" title="只複製這個名稱，方便貼到遊戲內搜尋">複製名稱</button>
+              <button type="button" id="source-close" class="text-btn">關閉</button>
+            </span>
+          </div>
+          <div id="source-body"></div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
