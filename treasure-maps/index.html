@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>挖寶地圖獎勵與期望值</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <p class="eyebrow">FFXIV · 繁中 TC</p>
+      <h1>挖寶地圖</h1>
+    </div>
+    <p class="lede">整理陳舊的地圖 G#／S# 的獎勵結構與期望值。現行圖（G16–G18、S5）以社群抽樣機率搭配陸行鳥市場板最低掛牌估算；舊圖列重點獎勵與魔紋去向。</p>
+  </header>
+
+  <div class="toolbar">
+    <label class="market-pick">伺服器
+      <select id="market-world" aria-label="市場板伺服器">
+        <option value="陸行鳥">陸行鳥（全資料中心最低）</option>
+        <option value="伊弗利特">伊弗利特</option>
+        <option value="迦樓羅">迦樓羅</option>
+        <option value="利維坦">利維坦</option>
+        <option value="鳳凰">鳳凰</option>
+        <option value="奧汀">奧汀</option>
+        <option value="巴哈姆特">巴哈姆特</option>
+        <option value="拉姆">拉姆</option>
+        <option value="泰坦">泰坦</option>
+      </select>
+    </label>
+    <button type="button" id="market-btn" class="btn">查市場價並重算</button>
+    <label class="toggle">
+      <input type="checkbox" id="include-portal" checked>
+      計入寶庫加權
+    </label>
+    <label class="field">寶庫加權倍率
+      <input type="number" id="portal-scale" min="0" max="3" step="0.1" value="1">
+    </label>
+    <p id="status" class="status" aria-live="polite"></p>
+  </div>
+
+  <nav class="tabs" id="tabs" role="tablist">
+    <button type="button" class="tab is-on" data-series="all">全部</button>
+    <button type="button" class="tab" data-series="G">陳舊 G#</button>
+    <button type="button" class="tab" data-series="S">陳舊 S#</button>
+    <button type="button" class="tab" data-series="current">現行期望值</button>
+  </nav>
+
+  <section class="summary" id="summary"></section>
+  <main class="board" id="board"></main>
+
+  <button type="button" class="detail-backdrop" id="detail-backdrop" hidden aria-label="關閉詳情"></button>
+  <aside class="detail" id="detail" hidden>
+    <div class="detail-head">
+      <h2 id="detail-title">地圖詳情</h2>
+      <button type="button" id="detail-close" class="text-btn">關閉</button>
+    </div>
+    <div id="detail-body"></div>
+  </aside>
+
+  <footer class="foot" id="footnote"></footer>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
