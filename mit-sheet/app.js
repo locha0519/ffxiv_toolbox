@@ -130,8 +130,14 @@
 
   function showOrigin() {
     const node = document.getElementById("origin-url");
-    if (location.protocol === "file:") node.textContent = "http://127.0.0.1:8766/";
-    else node.textContent = location.href.split("#")[0];
+    if (location.protocol === "file:") {
+      node.textContent = "http://127.0.0.1:8766/?v=4";
+      return;
+    }
+    const url = new URL(location.href);
+    url.search = "v=4";
+    url.hash = "";
+    node.textContent = url.toString();
   }
 
   function setMode(mode) {
@@ -1063,9 +1069,10 @@
   }
 
   function updatePreviewButton() {
-    const button = document.querySelector('[data-act="preview"]');
-    if (!button) return;
-    button.textContent = state.preview ? "結束預覽" : "預覽倒數";
+    const label = state.preview ? "結束預覽" : "預覽倒數";
+    document.querySelectorAll('[data-act="preview"]').forEach(function (button) {
+      button.textContent = label;
+    });
   }
 
   function adoptActClock(zeroAt) {

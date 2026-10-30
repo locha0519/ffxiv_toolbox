@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>排軸小抄</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body class="mode-plan">
   <header class="top">
@@ -23,6 +23,7 @@
       <button type="button" id="mode-plan" data-act="mode" data-mode="plan" aria-pressed="true">排軸</button>
       <button type="button" id="mode-sheet" data-act="mode" data-mode="sheet" aria-pressed="false">小抄</button>
     </div>
+    <button type="button" data-act="preview" title="跳到第一招前幾秒，看倒數開始後的畫面。沒有聲音。">預覽倒數</button>
     <label title="小抄會早這幾秒把下一招放大。表上的時間仍是你按下技能的時間。">提前
       <input id="lead" type="number" min="0" max="10" step="0.5" value="2" aria-label="提前提醒秒數">
       秒
@@ -37,7 +38,7 @@
   </div>
   <p id="status" class="status" role="status"></p>
   <p id="demo-note" class="demo-note" hidden>這是示範。表上的時間是按下技能的時間，提醒會再早幾秒。可以改，或按清空這場重排。</p>
-    <p class="help">先點 start.bat。ACT 安裝 OverlayPlugin，新增 Overlay，網址填 <code id="origin-url">http://127.0.0.1:8766/</code>。要選職業或按預覽，先不要勾滑鼠穿透；位置調好再勾。預覽倒數會跳到第一招前幾秒，看起來就跟飄在畫面上一樣，沒有聲音。OBS 若是擷取整個螢幕，把這個 Overlay 放在沒被錄到的螢幕，直播就看不到。匯入減傷表備份會直接帶進你那個位置的技能。</p>
+    <p class="help">先點 start.bat。ACT 安裝 OverlayPlugin，新增 Overlay，網址填 <code id="origin-url">http://127.0.0.1:8766/?v=4</code>。舊網址會留著上一版，請改成這一條再按重新載入。最上面有「預覽倒數」。要選職業或按預覽，先不要勾滑鼠穿透；位置調好再勾。沒有聲音。OBS 若是擷取整個螢幕，把這個 Overlay 放在沒被錄到的螢幕，直播就看不到。匯入減傷表備份會直接帶進你那個位置的技能。</p>
   <div id="mit-import" class="mit-import" hidden>
     <p>選完檔會先帶進備份裡記住的那一場和你的位置。要換場或換位置，選好再按帶進小抄。機制名稱由本機向 mit.xivtc.com 讀。</p>
     <div class="row">
@@ -121,8 +122,8 @@
     <p class="hint sheet-hint">沒有聲音。選職業會換技能清單；這場若已排好，只有同名的會跟著換。預覽倒數看下一招和秒數。空白鍵開始或暫停練習，R 重來。接到 ACT 後改跟倒數走。</p>
   </section>
 
-  <script src="skills.js"></script>
-  <script src="logic.js"></script>
-  <script src="app.js"></script>
+  <script src="skills.js?v=4"></script>
+  <script src="logic.js?v=4"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
