@@ -416,15 +416,16 @@ body.mode-sheet .sheet { margin-top: 16px; }
 #hero-kicker:empty { display: none; }
 
 .meter {
+  position: relative;
   width: min(280px, 100%);
-  height: 12px;
+  height: 22px;
   margin: 8px 0 2px;
   border-radius: 999px;
   background: rgba(246, 239, 228, 0.16);
   overflow: hidden;
 }
 .meter[hidden] { display: none !important; }
-.meter span {
+#hero-meter-fill {
   display: block;
   height: 100%;
   width: 100%;
@@ -433,14 +434,74 @@ body.mode-sheet .sheet { margin-top: 16px; }
   background: linear-gradient(90deg, rgba(226, 184, 106, 0.35), var(--gold));
   border-radius: inherit;
 }
-.hero.ready .meter span,
-.hero.now .meter span { background: var(--gold); }
+#hero-meter-time {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #f6efe4;
+  text-shadow: 0 1px 1px #000;
+  pointer-events: none;
+}
+.hero.ready #hero-meter-fill,
+.hero.now #hero-meter-fill { background: var(--gold); }
 
 body.as-overlay.mode-sheet .meter,
 body.preview-overlay.mode-sheet .meter {
   width: 100%;
-  height: 16px;
+  height: 22px;
 }
+
+.hero-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#hero-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  flex: none;
+  background: rgba(0, 0, 0, 0.28);
+}
+#hero-icon[hidden] { display: none !important; }
+body.as-overlay.mode-sheet #hero-icon,
+body.preview-overlay.mode-sheet #hero-icon {
+  width: 56px;
+  height: 56px;
+}
+
+.next-two {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+.next-two[hidden] { display: none !important; }
+.next-two li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-top: 1px solid rgba(246, 239, 228, 0.16);
+  font-size: 18px;
+}
+.next-two img {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  flex: none;
+}
+.next-two .t {
+  color: var(--gold);
+  min-width: 52px;
+  font-variant-numeric: tabular-nums;
+}
+.next-two .m { color: var(--muted); font-size: 13px; }
 #hero-skill {
   margin: 6px 0;
   font-size: clamp(56px, 9vw, 112px);
@@ -475,6 +536,20 @@ body.preview-overlay.mode-sheet #hero-note {
   padding: 8px 4px;
   border-top: 1px solid #3a3128;
   font-size: 22px;
+}
+
+ol.next-two {
+  max-height: none;
+  overflow: visible;
+  margin: 4px 0 0;
+}
+ol.next-two li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-top: 1px solid rgba(246, 239, 228, 0.16);
+  font-size: 18px;
 }
 
 .sheet li.past { opacity: 0.35; }

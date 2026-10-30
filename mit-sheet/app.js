@@ -23,6 +23,7 @@
     lastFocusId: null,
     pendingDelete: null,
     ticking: false,
+    nextKey: "",
     mitBackup: null,
     mitChoices: null,
     mitNames: {}
@@ -88,6 +89,9 @@
       persist();
     });
     document.getElementById("import-file").addEventListener("change", onImport);
+    document.getElementById("hero-icon").addEventListener("error", function () {
+      this.hidden = true;
+    });
     document.addEventListener("keydown", onKey);
     window.addEventListener("storage", function (event) {
       if (event.key !== STORAGE || !event.newValue) return;
@@ -131,11 +135,11 @@
   function showOrigin() {
     const node = document.getElementById("origin-url");
     if (location.protocol === "file:") {
-      node.textContent = "http://127.0.0.1:8766/?v=5";
+      node.textContent = "http://127.0.0.1:8766/?v=6";
       return;
     }
     const url = new URL(location.href);
-    url.search = "v=5";
+    url.search = "v=6";
     url.hash = "";
     node.textContent = url.toString();
   }
@@ -1050,26 +1054,33 @@
     const warn = document.getElementById("hero-warn");
     const meter = document.getElementById("hero-meter");
     const fill = document.getElementById("hero-meter-fill");
+    const meterTime = document.getElementById("hero-meter-time");
     if (!focus) {
       kicker.textContent = casts.length ? "這段結束" : "還沒排技能";
       skill.textContent = casts.length ? "沒有下一招" : "先回排軸";
       note.textContent = "";
       warn.textContent = "";
       meter.hidden = true;
+      meterTime.textContent = "";
+      paintIcon("");
     } else {
       if (now == null) kicker.textContent = "第一招";
       else if (phase === "now") kicker.textContent = "現在";
       else if (phase === "ready") kicker.textContent = "準備";
       else kicker.textContent = "";
-      skill.textContent = L.skillName(state.plan, focus);
+      const name = L.skillName(state.plan, focus);
+      skill.textContent = name;
       note.textContent = focus.note || "";
       warn.textContent = issues[focus.id] ? "這次排太早，冷卻還差 " + Math.ceil(issues[focus.id].short) + " 秒" : "";
+      paintIcon(name);
       meter.hidden = false;
       let scale = 1;
       if (now != null) scale = meterScale(casts, focus, now);
       if (phase === "now") scale = 1;
       fill.style.transform = "scaleX(" + scale.toFixed(4) + ")";
+      meterTime.textContent = now == null ? L.formatTime(focus.time) : L.formatTime(Math.max(0, focus.time - now));
     }
+    paintNext(casts, focus);
     const items = document.querySelectorAll("#sheet-list li");
     items.forEach(function (item) {
       const cast = casts.find(function (entry) { return entry.id === item.dataset.id; });
@@ -1084,6 +1095,66 @@
       const current = document.querySelector('#sheet-list li[data-id="' + cssAttr(focus.id) + '"]');
       if (current && current.scrollIntoView) current.scrollIntoView({ block: "nearest" });
     }
+  }
+
+  function iconUrl(file) {
+    if (!file) return "";
+    if (location.protocol === "file:") return "https://mit.xivtc.com/data/icons/" + file;
+    return "/api/mit/icons/" + file;
+  }
+
+  function paintIcon(name) {
+    const img = document.getElementById("hero-icon");
+    const file = Skills.iconFor(name);
+    const url = iconUrl(file);
+    if (!url) {
+      img.hidden = true;
+      img.removeAttribute("src");
+      img.dataset.name = "";
+      return;
+    }
+    if (img.dataset.name !== name) {
+      img.dataset.name = name;
+      img.hidden = false;
+      img.src = url;
+    }
+  }
+
+  function paintNext(casts, focus) {
+    const list = document.getElementById("next-two");
+    let key = "";
+    let upcoming = [];
+    if (focus) {
+      const index = casts.findIndex(function (cast) { return cast.id === focus.id; });
+      upcoming = casts.slice(index + 1, index + 3);
+      key = upcoming.map(function (cast) {
+        return cast.id + "@" + cast.time + "@" + L.skillName(state.plan, cast) + "@" + (cast.note || "");
+      }).join("|");
+    }
+    if (key === state.nextKey) return;
+    state.nextKey = key;
+    clear(list);
+    if (!upcoming.length) {
+      list.hidden = true;
+      return;
+    }
+    list.hidden = false;
+    upcoming.forEach(function (cast) {
+      const name = L.skillName(state.plan, cast);
+      const item = el("li", "");
+      const icon = document.createElement("img");
+      icon.alt = "";
+      const file = Skills.iconFor(name);
+      if (file) {
+        icon.src = iconUrl(file);
+        icon.addEventListener("error", function () { icon.remove(); });
+      } else icon.hidden = true;
+      item.appendChild(icon);
+      item.appendChild(el("span", "t", L.formatTime(cast.time)));
+      item.appendChild(el("span", "n", name));
+      if (cast.note) item.appendChild(el("span", "m", cast.note));
+      list.appendChild(item);
+    });
   }
 
   function updatePreviewButton() {

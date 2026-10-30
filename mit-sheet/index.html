@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>排軸小抄</title>
-  <link rel="stylesheet" href="styles.css?v=5">
+  <link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body class="mode-plan">
   <header class="top">
@@ -38,7 +38,7 @@
   </div>
   <p id="status" class="status" role="status"></p>
   <p id="demo-note" class="demo-note" hidden>這是示範。表上的時間是按下技能的時間，提醒會再早幾秒。可以改，或按清空這場重排。</p>
-    <p class="help">先點 start.bat。ACT 安裝 OverlayPlugin，新增 Overlay，網址填 <code id="origin-url">http://127.0.0.1:8766/?v=5</code>。舊網址會留著上一版，請改成這一條再按重新載入。倒數是一條會縮短的金條，金條走完就是要按的時候。預覽和 Overlay 只留下一招，底是半透明。要選職業或按預覽，先不要勾滑鼠穿透。沒有聲音。OBS 若是擷取整個螢幕，把這個 Overlay 放在沒被錄到的螢幕。</p>
+    <p class="help">先點 start.bat。ACT 安裝 OverlayPlugin，新增 Overlay，網址填 <code id="origin-url">http://127.0.0.1:8766/?v=6</code>。舊網址會留著上一版，請改成這一條再按重新載入。金條會縮短，右邊是剩下的時間。技能名稱左邊是圖示，下面兩行是接下來的技能。底是半透明。要選職業或按預覽，先不要勾滑鼠穿透。沒有聲音。</p>
   <div id="mit-import" class="mit-import" hidden>
     <p>選完檔會先帶進備份裡記住的那一場和你的位置。要換場或換位置，選好再按帶進小抄。機制名稱由本機向 mit.xivtc.com 讀。</p>
     <div class="row">
@@ -114,17 +114,21 @@
     <p id="sheet-msg" class="sheet-msg"></p>
     <div class="hero wait" id="hero">
       <p id="hero-kicker"></p>
-      <div id="hero-meter" class="meter" hidden><span id="hero-meter-fill"></span></div>
-      <p id="hero-skill"></p>
+      <div id="hero-meter" class="meter" hidden><span id="hero-meter-fill"></span><span id="hero-meter-time"></span></div>
+      <div class="hero-line">
+        <img id="hero-icon" alt="" hidden>
+        <p id="hero-skill"></p>
+      </div>
       <p id="hero-note"></p>
       <p id="hero-warn"></p>
     </div>
+    <ol id="next-two" class="next-two" hidden></ol>
     <ol id="sheet-list"></ol>
     <p class="hint sheet-hint">沒有聲音。金條從滿慢慢變短，短完就按。空白鍵開始或暫停練習，R 重來。接到 ACT 後改跟倒數走。</p>
   </section>
 
-  <script src="skills.js?v=5"></script>
-  <script src="logic.js?v=5"></script>
-  <script src="app.js?v=5"></script>
+  <script src="skills.js?v=6"></script>
+  <script src="logic.js?v=6"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>
