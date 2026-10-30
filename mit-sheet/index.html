@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>排軸小抄</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="mode-plan">
+  <header class="top">
+    <div class="brand">
+      <p class="eyebrow">FFXIV · 繁中</p>
+      <h1>排軸小抄</h1>
+    </div>
+    <p class="lede">只排你自己要按的技能。戰鬥時看大字，不用在減傷表裡找格子。排完可以存檔，也能交給 ACT 在倒數後念給你聽。</p>
+  </header>
+
+  <div class="toolbar">
+    <label>這場
+      <input id="fight-name" type="text" maxlength="40" placeholder="例如 M9S" autocomplete="off">
+    </label>
+    <div class="modes" role="tablist">
+      <button type="button" id="mode-plan" data-act="mode" data-mode="plan" aria-pressed="true">排軸</button>
+      <button type="button" id="mode-sheet" data-act="mode" data-mode="sheet" aria-pressed="false">小抄</button>
+    </div>
+    <label title="小抄和 ACT 會早這幾秒出聲。表上的時間仍是你按下技能的時間。">提前
+      <input id="lead" type="number" min="0" max="10" step="0.5" value="2" aria-label="提前提醒秒數">
+      秒
+    </label>
+    <button type="button" data-act="copy">複製小抄</button>
+    <button type="button" data-act="download" data-kind="text">下載文字</button>
+    <button type="button" data-act="download" data-kind="json">下載排軸</button>
+    <button type="button" data-act="download" data-kind="macro">遊戲巨集</button>
+    <button type="button" data-act="download" data-kind="act" title="匯入 Triggernometry，倒數後用語音念技能">ACT 語音</button>
+    <button type="button" data-act="download" data-kind="cactbot" title="給 cactbot 的時間軸，不是 Triggernometry">時間軸</button>
+    <button type="button" data-act="import">匯入</button>
+    <input id="import-file" type="file" accept="application/json,.json" hidden>
+    <button type="button" id="clear-plan" data-act="clear">清空這場</button>
+  </div>
+  <p id="status" class="status" role="status"></p>
+  <p id="demo-note" class="demo-note" hidden>這是示範。表上的時間是按下技能的時間，提醒會再早幾秒。可以改，或按清空這場重排。</p>
+  <p class="help">ACT 語音：把「ACT 語音」下載的 xml 匯入 Triggernometry。進本倒數會預約語音，團滅再倒數會取消上一輪。畫面上的大字：先點 start.bat，OverlayPlugin 的網址填 <code id="origin-url">http://127.0.0.1:8766/</code>。排軸存在這個網址上，重新整理還在。</p>
+
+  <div id="plan" class="plan">
+    <aside class="skills-panel">
+      <label class="field">職業
+        <select id="job" aria-label="職業"></select>
+      </label>
+      <button type="button" data-act="load-job">載入這個職業的技能</button>
+      <p class="hint">載入會換掉下面的清單。已經排好、而且同名的會留著。每張卡片下面就是這招的施放時間。</p>
+      <div id="skill-list"></div>
+      <form id="skill-form" class="stack">
+        <p class="form-title">自己加一招</p>
+        <input id="skill-name" name="name" placeholder="例如 親疏自行" maxlength="24" autocomplete="off" required aria-label="技能名稱">
+        <label>冷卻 <input name="cooldown" type="number" min="1" max="3600" value="120" required> 秒</label>
+        <label>持續 <input name="duration" type="number" min="0" max="120" value="6" required> 秒</label>
+        <label>層數 <input name="charges" type="number" min="1" max="9" value="1" required></label>
+        <button type="submit">加入技能</button>
+      </form>
+    </aside>
+    <main class="board">
+      <div class="board-head">
+        <p id="arm-hint">先點左邊的技能，再點時間軸或機制。</p>
+        <div class="modes">
+          <button type="button" id="group-time" data-act="group" data-group="time" aria-pressed="true">依時間</button>
+          <button type="button" id="group-skill" data-act="group" data-group="skill" aria-pressed="false">依技能</button>
+        </div>
+      </div>
+      <div id="timeline"></div>
+      <div id="cast-list"></div>
+      <details class="mech" open>
+        <summary>老闆機制（選填，用來對照。戰鬥小抄只列你要按的技能）</summary>
+        <form id="mech-form" class="row">
+          <input name="time" type="text" placeholder="0:32" aria-label="機制時間" autocomplete="off">
+          <input name="name" type="text" placeholder="機制名稱" maxlength="40" aria-label="機制名稱" autocomplete="off">
+          <button type="submit">加機制</button>
+        </form>
+        <textarea id="paste" rows="4" placeholder="也可以一次貼上，一行一個&#10;0:12 全體傷害&#10;0:32 雙重攻擊&#10;65 分散"></textarea>
+        <div class="row">
+          <button type="button" data-act="paste-add">加入這些機制</button>
+          <button type="button" data-act="paste-replace">用這些取代</button>
+        </div>
+        <div id="mech-list"></div>
+      </details>
+    </main>
+  </div>
+
+  <section id="sheet" class="sheet" hidden>
+    <div class="sheet-bar">
+      <p id="clock">--:--</p>
+      <p id="act-status">尚未開始</p>
+      <button type="button" data-act="practice">開始練習</button>
+      <button type="button" data-act="pause">暫停</button>
+      <button type="button" data-act="reset-clock">重來</button>
+      <label class="check"><input id="speech" type="checkbox"> 語音</label>
+      <button type="button" data-act="mode" data-mode="plan">回排軸</button>
+    </div>
+    <div class="hero wait" id="hero">
+      <p id="hero-kicker"></p>
+      <p id="hero-skill"></p>
+      <p id="hero-note"></p>
+      <p id="hero-warn"></p>
+    </div>
+    <ol id="sheet-list"></ol>
+    <p class="hint sheet-hint">空白鍵開始或暫停練習，R 重來。接到 ACT 後改跟倒數走。</p>
+  </section>
+
+  <script src="skills.js"></script>
+  <script src="logic.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
