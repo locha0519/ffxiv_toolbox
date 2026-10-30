@@ -19,6 +19,9 @@
     group: ui.group === "skill" ? "skill" : "time",
     overlay: false,
     overlayHooked: false,
+    overlayView: "idle",
+    liveJob: "",
+    liveRaid: "",
     preview: false,
     suppressClick: false,
     clock: { zeroAt: null, paused: null, source: "idle" },
@@ -202,11 +205,11 @@
     const node = document.getElementById("origin-url");
     if (!node) return;
     if (location.protocol === "file:") {
-      node.textContent = "http://127.0.0.1:8766/?v=10";
+      node.textContent = "http://127.0.0.1:8766/?v=12";
       return;
     }
     const url = new URL(location.href);
-    url.search = "v=10";
+    url.search = "v=12";
     url.hash = "";
     node.textContent = url.toString();
   }
@@ -517,7 +520,18 @@
     if (!node || node.closest("#timeline")) return;
     const act = node.dataset.act;
     const id = node.dataset.id;
-    if (act === "mode") setMode(node.dataset.mode);
+    if (act === "toggle-menu") {
+      setOverlayView(state.overlayView === "menu" ? (shouldPlay() ? "playing" : "idle") : "menu");
+      return;
+    }
+    if (act === "mode") {
+      if (state.overlay && node.dataset.mode === "plan") {
+        setOverlayView("menu");
+        setMode("plan");
+        return;
+      }
+      setMode(node.dataset.mode);
+    }
     else if (act === "group") {
       state.group = node.dataset.group === "skill" ? "skill" : "time";
       saveUi();
@@ -554,7 +568,10 @@
     else if (act === "reset-clock") resetClock();
     else if (act === "preview") {
       if (state.preview) endPreview();
-      else startPreview();
+      else {
+        startPreview();
+        if (state.overlay) setOverlayView("playing");
+      }
     } else if (act === "job-menu") toggleMenu(sheetJob, document.getElementById("sheet-job-menu"));
     else if (act === "pick-job") {
       setSheetJob(id);
@@ -1253,7 +1270,11 @@
       fillJobs();
       persist();
       fillStatic();
-      setMode(keepSheet ? "sheet" : "plan");
+      if (state.overlay) {
+        setMode(shouldPlay() || keepSheet ? "sheet" : "plan");
+        if (shouldPlay()) setOverlayView("playing");
+        else if (state.overlayView !== "menu") setOverlayView("idle");
+      } else setMode(keepSheet ? "sheet" : "plan");
       renderAll();
       setSheetMsg(message);
       setStatus(message, 12000);
@@ -1556,11 +1577,15 @@
     state.preview = false;
     document.body.classList.remove("preview-overlay");
     state.clock = { zeroAt: zeroAt, paused: null, source: "act" };
-    if (state.mode !== "sheet") setMode("sheet");
-    else {
+    matchLiveAxis();
+    if (shouldPlay()) {
+      setOverlayView("playing");
+      setMode("sheet");
       paintSheet();
       ensureTick();
+      return;
     }
+    if (state.overlayView !== "menu") setOverlayView("idle");
   }
 
   function syncCountdown(seconds) {
@@ -1577,6 +1602,74 @@
       tries += 1;
       if (hookOverlay() || tries > 20) clearInterval(timer);
     }, 500);
+  }
+
+  function setOverlayView(view) {
+    const next = view === "playing" || view === "menu" ? view : "idle";
+    state.overlayView = next;
+    document.body.classList.toggle("playing", next === "playing");
+    document.body.classList.toggle("menu", next === "menu");
+    document.body.classList.toggle("collapsed", next === "idle");
+    const peek = document.getElementById("peek");
+    if (peek) {
+      peek.hidden = !state.overlay || next === "playing";
+      const job = Skills.byId(state.liveJob);
+      const raid = (state.mitNames && state.mitNames[state.liveRaid]) || state.liveRaid;
+      peek.textContent = next === "menu" ? "收合" : ((raid || job) ? ((raid || "這場") + " " + (job ? job.name : "")).trim() : "小抄");
+    }
+    if (next === "playing") setMode("sheet");
+    else if (next === "menu") setMode("plan");
+  }
+
+  function shouldPlay() {
+    if (!state.overlay) return false;
+    if (state.preview) return true;
+    if (!state.plan.casts.length) return false;
+    if (state.clock.source !== "act" || state.clock.zeroAt == null) return false;
+    if (state.liveJob && state.plan.jobId && state.liveJob !== state.plan.jobId) return false;
+    if (state.plan.raidId && state.liveRaid !== state.plan.raidId) return false;
+    return true;
+  }
+
+  function matchLiveAxis() {
+    if (!state.libraries.length) return;
+    const job = state.liveJob;
+    const raidId = state.liveRaid;
+    if (!job && !raidId) return;
+    const same = (!job || state.plan.jobId === job) && (!raidId || state.plan.raidId === raidId);
+    if (same && state.plan.casts.length) return;
+    let found = null;
+    state.libraries.forEach(function (lib) {
+      (lib.choices.raids || []).forEach(function (raid) {
+        if (raidId && raid.id !== raidId) return;
+        jobRows(raid).forEach(function (row) {
+          if (job && row.job !== job) return;
+          if (!found) found = { lib: lib, raidId: raid.id, role: row.role, job: row.job };
+        });
+      });
+    });
+    if (!found) return;
+    state.libraryId = found.lib.id;
+    state.mitBackup = found.lib.backup;
+    state.mitChoices = found.lib.choices;
+    importAxis(found.raidId, found.role, found.job, true);
+  }
+
+  function applyLive(job, raid) {
+    let changed = false;
+    if (job && job !== state.liveJob) {
+      state.liveJob = job;
+      changed = true;
+    }
+    if (raid !== undefined && raid !== state.liveRaid) {
+      state.liveRaid = raid;
+      changed = true;
+    }
+    if (!changed) return;
+    matchLiveAxis();
+    if (shouldPlay()) setOverlayView("playing");
+    else if (state.overlayView === "playing") setOverlayView("idle");
+    else setOverlayView(state.overlayView);
   }
 
   function logTexts(data) {
@@ -1597,27 +1690,38 @@
     state.overlayHooked = true;
     window.addOverlayListener("LogLine", function (data) {
       const texts = logTexts(data);
+      let job = "";
+      let raid;
       let seconds = null;
+      let engage = false;
+      let wipe = false;
       for (let i = 0; i < texts.length; i += 1) {
-        seconds = L.parseCountdown(texts[i]);
-        if (seconds != null) break;
+        if (!job) job = L.parseJobChange(texts[i]);
+        if (raid === undefined) {
+          const zone = L.parseZoneChange(texts[i]);
+          if (zone || /(?:^|\|)(?:01|ChangeZone)\|/.test(texts[i])) raid = zone;
+        }
+        if (seconds == null) seconds = L.parseCountdown(texts[i]);
+        if (!engage && L.parseEngage(texts[i])) engage = true;
+        if (!wipe && L.parseWipe(texts[i])) wipe = true;
+      }
+      if (job || raid !== undefined) applyLive(job, raid);
+      if (wipe) {
+        resetClock();
+        if (state.overlayView === "playing") setOverlayView("idle");
+        return;
       }
       if (seconds != null) {
         syncCountdown(seconds);
         return;
       }
-      for (let j = 0; j < texts.length; j += 1) {
-        if (L.parseEngage(texts[j])) {
-          syncEngage();
-          return;
-        }
-      }
+      if (engage) syncEngage();
     });
     try { window.startOverlayEvents(); }
     catch (error) { /* 監聽已經掛上，就算啟動事件失敗，下一條日誌仍會試。 */ }
     state.overlay = true;
     document.body.classList.add("as-overlay");
-    setMode("sheet");
+    setOverlayView("idle");
     paintSheet();
     return true;
   }
@@ -1625,7 +1729,7 @@
   function onKey(event) {
     const field = event.target && event.target.closest && event.target.closest("input, textarea, select");
     if (field) return;
-    if (state.mode !== "sheet") return;
+    if (state.mode !== "sheet" && state.overlayView !== "playing") return;
     if (event.code === "Space" && event.target && event.target.closest && event.target.closest("button")) return;
     if (event.code === "Space") {
       event.preventDefault();

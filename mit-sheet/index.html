@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>排軸小抄</title>
-  <link rel="stylesheet" href="styles.css?v=11">
+  <link rel="stylesheet" href="styles.css?v=12">
 </head>
-<body class="mode-plan">
+<body class="mode-plan collapsed">
+  <button type="button" id="peek" data-act="toggle-menu" hidden>小抄</button>
   <header class="top">
     <div class="brand">
       <p class="eyebrow">FFXIV · 繁中</p>
@@ -67,7 +68,7 @@
       <button type="button" data-act="pause">暫停</button>
       <button type="button" data-act="reset-clock">重來</button>
       <button type="button" data-act="import">匯入</button>
-      <button type="button" data-act="mode" data-mode="plan">回排軸</button>
+      <button type="button" data-act="mode" data-mode="plan">微調排軸</button>
     </div>
     <p id="sheet-msg" class="sheet-msg"></p>
     <div class="hero wait" id="hero">
@@ -78,11 +79,11 @@
     </div>
     <ol id="next-two" class="next-two" hidden></ol>
     <ol id="sheet-list"></ol>
-    <p class="hint sheet-hint">沒有聲音。金條只在最後五秒縮短。五秒內的技能都會放大，佇列再多兩招，顯示的是相對時間。選職業會換成這場備份裡同一個 boss 的那個職業。空白鍵開始或暫停練習，R 重來。</p>
+    <p class="hint sheet-hint">遊戲內職業和 boss 對得上才會展開倒數。對不上就縮小。點小鈕可以匯入或微調排軸。</p>
   </section>
 
-  <script src="skills.js?v=11"></script>
-  <script src="logic.js?v=11"></script>
-  <script src="app.js?v=11"></script>
+  <script src="skills.js?v=12"></script>
+  <script src="logic.js?v=12"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>

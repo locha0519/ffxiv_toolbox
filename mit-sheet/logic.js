@@ -798,6 +798,115 @@
     return false;
   }
 
+  const JOB_BY_ID = {
+    "1": "GLA", "2": "PGL", "3": "MRD", "4": "LNC", "5": "ARC", "6": "CNJ", "7": "THM",
+    "8": "CRP", "9": "BSM", "10": "ARM", "11": "GSM", "12": "LTW", "13": "WVR", "14": "ALC", "15": "CUL",
+    "16": "MIN", "17": "BTN", "18": "FSH",
+    "19": "PLD", "20": "MNK", "21": "WAR", "22": "DRG", "23": "BRD", "24": "WHM", "25": "BLM",
+    "26": "ACN", "27": "SMN", "28": "SCH", "29": "NIN", "30": "MCH", "31": "DRK", "32": "AST",
+    "33": "SAM", "34": "RDM", "35": "BLU", "36": "GNB", "37": "DNC", "38": "RPR", "39": "SGE",
+    "40": "VPR", "41": "PCT", "42": "PLD"
+  };
+
+  const JOB_BY_NAME = {
+    "騎士": "PLD", "paladin": "PLD", "pld": "PLD",
+    "戰士": "WAR", "warrior": "WAR", "war": "WAR",
+    "暗黑騎士": "DRK", "dark knight": "DRK", "drk": "DRK",
+    "絕槍戰士": "GNB", "gunbreaker": "GNB", "gnb": "GNB",
+    "白魔法師": "WHM", "white mage": "WHM", "whm": "WHM",
+    "學者": "SCH", "scholar": "SCH", "sch": "SCH",
+    "占星術士": "AST", "astrologian": "AST", "ast": "AST",
+    "賢者": "SGE", "sage": "SGE", "sge": "SGE",
+    "武僧": "MNK", "monk": "MNK", "mnk": "MNK",
+    "龍騎士": "DRG", "dragoon": "DRG", "drg": "DRG",
+    "忍者": "NIN", "ninja": "NIN", "nin": "NIN",
+    "武士": "SAM", "samurai": "SAM", "sam": "SAM",
+    "鐮刀戰士": "RPR", "reaper": "RPR", "rpr": "RPR",
+    "蝰蛇劍士": "VPR", "viper": "VPR", "vpr": "VPR",
+    "詩人": "BRD", "bard": "BRD", "brd": "BRD",
+    "機工士": "MCH", "machinist": "MCH", "mch": "MCH",
+    "舞者": "DNC", "dancer": "DNC", "dnc": "DNC",
+    "黑魔法師": "BLM", "black mage": "BLM", "blm": "BLM",
+    "召喚師": "SMN", "summoner": "SMN", "smn": "SMN",
+    "赤魔法師": "RDM", "red mage": "RDM", "rdm": "RDM",
+    "繪影法師": "PCT", "pictomancer": "PCT", "pct": "PCT"
+  };
+
+  function knownJob(code) {
+    const raw = String(code || "").trim();
+    if (!raw) return "";
+    if (JOB_BY_ID[raw]) {
+      const mapped = JOB_BY_ID[raw];
+      return mapped === "GLA" || mapped === "MRD" ? (mapped === "GLA" ? "PLD" : "WAR") : mapped;
+    }
+    const named = JOB_BY_NAME[raw] || JOB_BY_NAME[raw.toLowerCase()];
+    if (named) return named;
+    const upper = raw.toUpperCase();
+    return /^[A-Z]{3}$/.test(upper) ? upper : "";
+  }
+
+  function parseJobChange(text) {
+    const line = String(text || "");
+    const parts = line.split("|");
+    const type = parts[0] === "00" || /^\d{2}:/.test(parts[0]) ? (parts[2] || parts[0]) : parts[0];
+    if (/^(02|ChangePrimaryPlayer)$/i.test(type) || /ChangePrimaryPlayer/i.test(line)) {
+      for (let i = parts.length - 1; i >= 0; i -= 1) {
+        const job = knownJob(parts[i]);
+        if (job) return job;
+      }
+    }
+    if (/^(03|AddCombatant)$/i.test(type)) {
+      const job = knownJob(parts[5] || parts[6] || "");
+      if (job) return job;
+    }
+    if (/^(0C|PlayerStats)$/i.test(type)) {
+      const job = knownJob(parts[1] || parts[2] || "");
+      if (job) return job;
+    }
+    const spoken = line.match(/You change to (?:the )?(?:class|job) ([^.|\r\n]+)/i)
+      || line.match(/You change to ([^.|\r\n]+)/i)
+      || line.match(/You are now a ([^.|\r\n]+)/i)
+      || line.match(/職業(?:變更|改)為([^。|\r\n]+)/)
+      || line.match(/你現在是([^。|\r\n]+)/)
+      || line.match(/變更為([^。|\r\n]+)/);
+    if (spoken) {
+      const job = knownJob(spoken[1].trim());
+      if (job) return job;
+    }
+    return "";
+  }
+
+  const RAID_HINTS = [
+    { id: "m8s", names: ["m8s", "savage m8", "m8 savage", "aac cruiserweight m4 (savage)", "輕量級 m4", "輕量級第4層 零式", "cruiserweight m4"] },
+    { id: "m7s", names: ["m7s", "savage m7", "m7 savage", "aac cruiserweight m3 (savage)", "輕量級 m3", "輕量級第3層 零式", "cruiserweight m3"] },
+    { id: "m6s", names: ["m6s", "savage m6", "m6 savage", "aac cruiserweight m2 (savage)", "輕量級 m2", "輕量級第2層 零式", "cruiserweight m2", "sugar riot", "蜜糖暴動"] },
+    { id: "m5s", names: ["m5s", "savage m5", "m5 savage", "aac cruiserweight m1 (savage)", "輕量級 m1", "輕量級第1層 零式", "cruiserweight m1"] },
+    { id: "fru", names: ["fru", "futures rewritten", "the futures rewritten", "絕伊甸", "光暗未來絕境戰", "relic of the future"] }
+  ];
+
+  function parseZoneChange(text) {
+    const line = String(text || "");
+    let match = line.match(/(?:^|\|)(?:01|ChangeZone)\|([0-9A-Fa-f]+)\|([^|\r\n]*)/);
+    const name = match ? match[2] : "";
+    const blob = (name + " " + line).toLowerCase();
+    for (let i = 0; i < RAID_HINTS.length; i += 1) {
+      const raid = RAID_HINTS[i];
+      for (let j = 0; j < raid.names.length; j += 1) {
+        if (blob.indexOf(raid.names[j]) >= 0) return raid.id;
+      }
+    }
+    if (match) return "";
+    return "";
+  }
+
+  function parseWipe(text) {
+    const line = String(text || "");
+    if (/has been defeated by/i.test(line) && /you/i.test(line)) return true;
+    if (/wipe/i.test(line) && /00:?4000000[fF]|4000000[fF]/.test(line)) return true;
+    if (/全員全滅|任務失敗/.test(line)) return true;
+    return false;
+  }
+
   function safeFile(name) {
     const cleaned = String(name || "排軸小抄").replace(/[\\/:*?"<>|]/g, " ").trim() || "排軸小抄";
     return cleaned.slice(0, 40);
@@ -839,6 +948,10 @@
     mitPlanFromBackup: mitPlanFromBackup,
     parseCountdown: parseCountdown,
     parseEngage: parseEngage,
+    parseJobChange: parseJobChange,
+    parseZoneChange: parseZoneChange,
+    parseWipe: parseWipe,
+    knownJob: knownJob,
     safeFile: safeFile,
     sortedByTime: sortedByTime
   };

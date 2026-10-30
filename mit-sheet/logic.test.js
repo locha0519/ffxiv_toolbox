@@ -148,6 +148,15 @@ assert.strictEqual(jobPlan.casts[0].skillId, jobPlan.skills[0].id);
 assert.strictEqual(jobPlan.casts[1].skillName, "舊技能");
 
 assert.strictEqual(L.parseCountdown("00|2026-01-01T00:00:00.0000000+08:00|0038||Battle commencing in 9 seconds!"), 9);
+assert.strictEqual(L.parseJobChange("02|2026-01-01T00:00:00.0000000+08:00|ChangePrimaryPlayer|40000000|Me|WHM"), "WHM");
+assert.strictEqual(L.parseJobChange("02|t|ChangePrimaryPlayer|40000000|Me|24"), "WHM");
+assert.strictEqual(L.parseJobChange("03|t|AddCombatant|10000001|Me|24|"), "WHM");
+assert.strictEqual(L.parseJobChange("You change to White Mage."), "WHM");
+assert.strictEqual(L.parseJobChange("職業變更為占星術士。"), "AST");
+assert.strictEqual(L.parseZoneChange("01|t|ChangeZone|04C0|AAC Cruiserweight M2 (Savage)"), "m6s");
+assert.strictEqual(L.parseZoneChange("01|t|ChangeZone|04C0|輕量級第2層 零式"), "m6s");
+assert.strictEqual(L.parseZoneChange("01|t|ChangeZone|0082|Limsa Lominsa"), "");
+assert.strictEqual(L.parseWipe("00|t|4000000F||wipe"), true);
 
 const mitBackup = {
   __v: 2,

@@ -23,18 +23,16 @@ body {
   color: var(--text);
 }
 
-body.as-overlay.mode-sheet,
+body.as-overlay,
 body.preview-overlay.mode-sheet {
   background: transparent;
   min-height: 0;
 }
 
-body.as-overlay.mode-sheet .top,
-body.as-overlay.mode-sheet .toolbar,
-body.as-overlay.mode-sheet .help,
-body.as-overlay.mode-sheet .demo-note,
-body.as-overlay.mode-sheet .status,
-body.as-overlay.mode-sheet .sheet-hint,
+body.as-overlay .top,
+body.as-overlay .help,
+body.as-overlay .demo-note,
+body.as-overlay .sheet-hint,
 body.preview-overlay.mode-sheet .top,
 body.preview-overlay.mode-sheet .toolbar,
 body.preview-overlay.mode-sheet .help,
@@ -42,6 +40,67 @@ body.preview-overlay.mode-sheet .demo-note,
 body.preview-overlay.mode-sheet .status,
 body.preview-overlay.mode-sheet .sheet-hint {
   display: none;
+}
+
+body.as-overlay.collapsed .toolbar,
+body.as-overlay.collapsed .status,
+body.as-overlay.collapsed .plan,
+body.as-overlay.collapsed .sheet {
+  display: none !important;
+}
+
+body.as-overlay.playing .toolbar,
+body.as-overlay.playing .plan,
+body.as-overlay.playing .status,
+body.as-overlay.playing #peek {
+  display: none !important;
+}
+
+body.as-overlay.menu .sheet,
+body.as-overlay.menu .sheet-hint {
+  display: none !important;
+}
+
+body.as-overlay.menu .toolbar,
+body.as-overlay.menu .status,
+body.as-overlay.menu .plan {
+  display: block;
+}
+
+body.as-overlay.menu #peek {
+  display: inline-flex;
+  margin: 8px 8px 0;
+}
+
+body.as-overlay.menu .toolbar {
+  display: flex;
+  padding: 8px;
+  margin: 8px;
+  width: min(560px, calc(100vw - 16px));
+  background: rgba(16, 14, 12, 0.72);
+  border-radius: 16px;
+}
+
+body.as-overlay.menu .plan {
+  margin: 0 8px 8px;
+  padding: 0;
+  width: min(560px, calc(100vw - 16px));
+}
+
+body.as-overlay.menu .board {
+  background: rgba(16, 14, 12, 0.72);
+}
+
+#peek {
+  display: none;
+}
+
+body.as-overlay.collapsed #peek {
+  display: inline-flex;
+  margin: 8px;
+  min-width: 72px;
+  background: rgba(16, 14, 12, 0.62);
+  border: 1px solid rgba(226, 184, 106, 0.55);
 }
 
 body.as-overlay.mode-sheet .sheet,
