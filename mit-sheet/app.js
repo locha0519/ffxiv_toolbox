@@ -135,11 +135,11 @@
   function showOrigin() {
     const node = document.getElementById("origin-url");
     if (location.protocol === "file:") {
-      node.textContent = "http://127.0.0.1:8766/?v=6";
+      node.textContent = "http://127.0.0.1:8766/?v=7";
       return;
     }
     const url = new URL(location.href);
-    url.search = "v=6";
+    url.search = "v=7";
     url.hash = "";
     node.textContent = url.toString();
   }
@@ -1047,38 +1047,45 @@
     const focus = now == null ? (casts[0] || null) : L.focusCast(casts, now, lead);
     const phase = now == null ? (focus ? "idle" : "done") : L.phaseOf(focus, now, lead);
     const hero = document.getElementById("hero");
-    hero.className = "hero " + (phase === "idle" ? "wait" : phase);
     const kicker = document.getElementById("hero-kicker");
     const skill = document.getElementById("hero-skill");
     const note = document.getElementById("hero-note");
     const warn = document.getElementById("hero-warn");
+    const when = document.getElementById("hero-when");
+    const digit = document.getElementById("hero-digit");
     const meter = document.getElementById("hero-meter");
     const fill = document.getElementById("hero-meter-fill");
-    const meterTime = document.getElementById("hero-meter-time");
+    const left = focus && now != null ? focus.time - now : null;
+    const soon = left != null && left <= 5;
+    hero.className = "hero " + (phase === "idle" ? "wait" : phase) + (focus ? (soon ? " big" : " compact") : "");
     if (!focus) {
       kicker.textContent = casts.length ? "這段結束" : "還沒排技能";
       skill.textContent = casts.length ? "沒有下一招" : "先回排軸";
       note.textContent = "";
+      when.textContent = "";
       warn.textContent = "";
+      digit.hidden = true;
+      digit.textContent = "";
       meter.hidden = true;
-      meterTime.textContent = "";
       paintIcon("");
     } else {
-      if (now == null) kicker.textContent = "第一招";
-      else if (phase === "now") kicker.textContent = "現在";
-      else if (phase === "ready") kicker.textContent = "準備";
-      else kicker.textContent = "";
+      kicker.textContent = "";
       const name = L.skillName(state.plan, focus);
       skill.textContent = name;
       note.textContent = focus.note || "";
+      when.textContent = L.formatTime(focus.time);
       warn.textContent = issues[focus.id] ? "這次排太早，冷卻還差 " + Math.ceil(issues[focus.id].short) + " 秒" : "";
       paintIcon(name);
       meter.hidden = false;
-      let scale = 1;
-      if (now != null) scale = meterScale(casts, focus, now);
-      if (phase === "now") scale = 1;
+      let scale = now == null ? 1 : meterScale(casts, focus, now);
       fill.style.transform = "scaleX(" + scale.toFixed(4) + ")";
-      meterTime.textContent = now == null ? L.formatTime(focus.time) : L.formatTime(Math.max(0, focus.time - now));
+      if (soon) {
+        digit.hidden = false;
+        digit.textContent = String(Math.max(0, Math.ceil(left)));
+      } else {
+        digit.hidden = true;
+        digit.textContent = "";
+      }
     }
     paintNext(casts, focus);
     const items = document.querySelectorAll("#sheet-list li");

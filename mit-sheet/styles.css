@@ -434,20 +434,6 @@ body.mode-sheet .sheet { margin-top: 16px; }
   background: linear-gradient(90deg, rgba(226, 184, 106, 0.35), var(--gold));
   border-radius: inherit;
 }
-#hero-meter-time {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 0 8px;
-  font-size: 13px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: #f6efe4;
-  text-shadow: 0 1px 1px #000;
-  pointer-events: none;
-}
 .hero.ready #hero-meter-fill,
 .hero.now #hero-meter-fill { background: var(--gold); }
 
@@ -457,11 +443,32 @@ body.preview-overlay.mode-sheet .meter {
   height: 22px;
 }
 
+.hero.compact { min-height: 0; padding: 2px 0 4px; }
 .hero-line {
   display: flex;
   align-items: center;
   gap: 10px;
 }
+.hero.compact .hero-line { gap: 8px; }
+.hero.compact .hero-copy { display: contents; }
+.hero.big .hero-copy { display: flex; flex-direction: column; min-width: 0; }
+#hero-digit {
+  color: var(--gold);
+  font-size: 72px;
+  font-weight: 700;
+  line-height: 0.9;
+  min-width: 0.7em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+#hero-digit[hidden] { display: none !important; }
+.hero.compact #hero-when {
+  color: var(--gold);
+  min-width: 52px;
+  font-variant-numeric: tabular-nums;
+  font-size: 18px;
+}
+.hero.big #hero-when { display: none; }
 #hero-icon {
   width: 72px;
   height: 72px;
@@ -474,6 +481,17 @@ body.as-overlay.mode-sheet #hero-icon,
 body.preview-overlay.mode-sheet #hero-icon {
   width: 56px;
   height: 56px;
+}
+body.as-overlay.mode-sheet .hero.compact #hero-icon,
+body.preview-overlay.mode-sheet .hero.compact #hero-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+body.as-overlay.mode-sheet .hero.big #hero-digit,
+body.preview-overlay.mode-sheet .hero.big #hero-digit {
+  font-size: 64px;
+  text-shadow: 0 2px 0 #000, 0 0 12px #000;
 }
 
 .next-two {
@@ -518,6 +536,23 @@ body.preview-overlay.mode-sheet #hero-skill,
 body.preview-overlay.mode-sheet #hero-kicker,
 body.preview-overlay.mode-sheet #hero-note {
   text-shadow: 0 2px 0 #000, 0 0 12px #000;
+}
+
+.hero.compact #hero-skill,
+body.as-overlay.mode-sheet .hero.compact #hero-skill,
+body.preview-overlay.mode-sheet .hero.compact #hero-skill {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.2;
+  text-shadow: none;
+}
+.hero.compact #hero-note,
+body.as-overlay.mode-sheet .hero.compact #hero-note,
+body.preview-overlay.mode-sheet .hero.compact #hero-note {
+  margin: 0;
+  font-size: 13px;
+  text-shadow: none;
 }
 
 .sheet ol {
