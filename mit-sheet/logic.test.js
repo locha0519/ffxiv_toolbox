@@ -188,6 +188,8 @@ const mitPlan = L.mitPlanFromBackup(mitBackup, "m6s", "H1", {
 });
 assert.strictEqual(mitPlan.name, "M6S H1 白魔法師");
 assert.strictEqual(mitPlan.jobId, "WHM");
+assert.strictEqual(mitPlan.raidId, "m6s");
+assert.strictEqual(mitPlan.role, "H1");
 assert.strictEqual(mitPlan.leadSec, 2);
 assert.strictEqual(mitPlan.casts.length, 2);
 assert.strictEqual(mitPlan.casts[0].time, 35);

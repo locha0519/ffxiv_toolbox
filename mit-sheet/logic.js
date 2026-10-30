@@ -151,6 +151,8 @@
       name: String(source.name || "").trim().slice(0, 40),
       leadSec: clampLead(source.leadSec == null ? 2 : source.leadSec),
       jobId: String(source.jobId || ""),
+      raidId: String(source.raidId || "").slice(0, 40),
+      role: /^(MT|ST|H[12]|D[1-4])$/.test(source.role) ? source.role : "",
       skills: skills,
       mechanics: sortedByTime(mechanics),
       casts: sortedByTime(casts)
@@ -751,6 +753,8 @@
       name: (shortName + " " + role + (jobLabel ? " " + jobLabel : "")).trim(),
       leadSec: choices.leadSec,
       jobId: onlyJob || roleChoice.job || "",
+      raidId: raidId,
+      role: role,
       skills: skills,
       mechanics: mechanics,
       casts: casts

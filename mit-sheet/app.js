@@ -165,11 +165,11 @@
   function showOrigin() {
     const node = document.getElementById("origin-url");
     if (location.protocol === "file:") {
-      node.textContent = "http://127.0.0.1:8766/?v=9";
+      node.textContent = "http://127.0.0.1:8766/?v=10";
       return;
     }
     const url = new URL(location.href);
-    url.search = "v=9";
+    url.search = "v=10";
     url.hash = "";
     node.textContent = url.toString();
   }
@@ -742,23 +742,79 @@
   function loadJobForSheet() {
     const job = Skills.byId(sheetJob.dataset.job);
     if (!job) return;
+    if (state.mitBackup && state.mitChoices) {
+      const axis = axisForJob(job.id);
+      if (!axis) {
+        setSheetJob(state.plan.jobId);
+        setPlanJob(state.plan.jobId);
+        setSheetMsg("這場備份沒有" + job.name + "的排軸。");
+        return;
+      }
+      const sameAxis = state.plan.raidId === axis.raidId && state.plan.role === axis.role && state.plan.jobId === axis.job;
+      const leftover = (state.plan.casts || []).some(function (cast) { return cast.skillName; });
+      if (sameAxis && state.plan.casts.length && !leftover) return;
+      importAxis(axis.raidId, axis.role, axis.job, true);
+      return;
+    }
     const wasDemo = state.plan.demo === true;
-    const hadCasts = !wasDemo && state.plan.casts.length > 0;
     setPlanJob(job.id);
     L.applyJob(state.plan, job);
-    if (!hadCasts) {
-      state.plan.casts = sampleCasts(state.plan.skills);
-      state.plan.mechanics = [];
-      if (wasDemo || !state.plan.name || state.plan.name === "示範") state.plan.name = job.name + " 預覽";
-      setSheetMsg("這段是預覽用的短排軸，不是你的副本。按預覽倒數看下一招和秒數。");
-    } else {
-      setSheetMsg("已換上" + job.name + "的技能清單。這場排好的時間還在，只有同名的會跟著換。");
-    }
+    const ids = {};
+    state.plan.skills.forEach(function (skill) { ids[skill.id] = true; });
+    state.plan.casts = state.plan.casts.filter(function (cast) { return ids[cast.skillId]; });
+    state.plan.mechanics = [];
+    if (!state.plan.casts.length) state.plan.casts = sampleCasts(state.plan.skills);
+    state.plan.name = renameJob(state.plan.name, job.name);
+    if (wasDemo || state.plan.name === job.name) state.plan.name = job.name + " 預覽";
+    setSheetMsg("畫面上改成" + job.name + "的技能。這不是備份裡的排軸。");
     state.armed = null;
     state.pendingDelete = null;
+    state.nextKey = "";
     fightName.value = state.plan.name || "";
     document.title = state.plan.name ? state.plan.name + " · 排軸小抄" : "排軸小抄";
     touch();
+  }
+
+  function renameJob(name, jobName) {
+    let text = String(name || "").trim();
+    Skills.jobs.forEach(function (item) {
+      const tail = " " + item.name;
+      if (text.endsWith(tail)) text = text.slice(0, -tail.length).trim();
+      else if (text === item.name) text = "";
+    });
+    text = text.replace(/ 預覽$/, "").trim();
+    return (text ? text + " " : "") + jobName;
+  }
+
+  function currentRaidId() {
+    const raids = (state.mitChoices && state.mitChoices.raids) || [];
+    if (state.plan.raidId && raids.some(function (raid) { return raid.id === state.plan.raidId; })) return state.plan.raidId;
+    const name = String(state.plan.name || "").toLowerCase();
+    let found = "";
+    raids.forEach(function (raid) {
+      const label = ((state.mitNames && state.mitNames[raid.id]) || "").toLowerCase();
+      if (label && name.indexOf(label) === 0 && label.length > found.length) found = raid.id;
+    });
+    if (found) return found;
+    raids.forEach(function (raid) {
+      if (name.indexOf(String(raid.id).toLowerCase()) >= 0) found = raid.id;
+    });
+    if (found) return found;
+    const picked = document.getElementById("mit-raid").dataset.raid;
+    if (picked && raids.some(function (raid) { return raid.id === picked; })) return picked;
+    return (state.mitChoices && state.mitChoices.defaultRaid) || "";
+  }
+
+  function axisForJob(jobId) {
+    const raidId = currentRaidId();
+    const raid = ((state.mitChoices && state.mitChoices.raids) || []).find(function (item) { return item.id === raidId; });
+    if (!raid) return null;
+    const rows = jobRows(raid).filter(function (row) { return row.job === jobId; });
+    if (!rows.length) return null;
+    const named = String(state.plan.name || "").match(/\b(MT|ST|H1|H2|D1|D2|D3|D4)\b/);
+    const role = state.plan.role || (named ? named[1] : "");
+    const row = rows.find(function (item) { return item.role === role; }) || rows[0];
+    return { raidId: raid.id, role: row.role, job: jobId };
   }
 
   function sampleCasts(skills) {
@@ -974,50 +1030,79 @@
       state.mitBackup = raw;
       state.mitChoices = choices;
       document.getElementById("show-mit").hidden = false;
+      if (location.protocol === "file:") return;
+      fetchJson(mitUrl("raids.json")).then(function (manifest) {
+        state.mitNames = state.mitNames || {};
+        (manifest.raids || []).forEach(function (raid) {
+          state.mitNames[raid.id] = raid.shortName || raid.name || raid.id;
+        });
+      }).catch(function () { /* 沒連上就用副本代號對名稱 */ });
     } catch (error) { /* 沒有上次的備份 */ }
   }
 
-  function importMit() {
+  let axisToken = 0;
+
+  function importAxis(raidId, role, onlyJob, keepSheet) {
     const backup = state.mitBackup;
-    const raidId = document.getElementById("mit-raid").dataset.raid;
-    const pick = document.getElementById("mit-job").dataset.pick || "";
-    const parts = pick.split("|");
-    const role = parts[0] || "";
-    const onlyJob = parts.slice(1).join("|");
+    const token = ++axisToken;
     if (!backup || !raidId || !role) {
       setStatus("先選 boss 和職業。");
       return;
     }
     if (location.protocol === "file:") {
+      setSheetMsg("請先雙擊 start.bat，用瀏覽器開 http://127.0.0.1:8766/ 再換職業。");
       setStatus("請先雙擊 start.bat，用瀏覽器開 http://127.0.0.1:8766/ 再匯入。直接開檔案讀不到機制名稱。", 12000);
       return;
     }
-    const button = document.querySelector('[data-act="mit-go"]');
-    button.disabled = true;
+    const previousJob = state.plan.jobId;
+    const go = document.querySelector('[data-act="mit-go"]');
+    if (go) go.disabled = true;
     setStatus("正在讀時間軸…", 20000);
+    setSheetMsg("正在換成" + ((Skills.byId(onlyJob) && Skills.byId(onlyJob).name) || onlyJob) + "…");
     loadMitBundle(raidId).then(function (bundle) {
-      if (state.mitBackup !== backup) return;
+      if (token !== axisToken || state.mitBackup !== backup) return;
       bundle.onlyJob = onlyJob;
       const known = Skills.byId(onlyJob);
       bundle.jobLabel = known ? known.name : onlyJob;
       state.plan = L.mitPlanFromBackup(backup, raidId, role, bundle);
       const skipped = state.plan.skippedOtherJob || 0;
       const brought = state.plan.name + "，" + state.plan.casts.length + " 次施放。";
+      const message = skipped
+        ? "已帶入" + brought + "另外 " + skipped + " 次是這個位置上其他職業的技能，沒帶進來。"
+        : "已帶入" + brought;
       state.armed = null;
+      state.pendingDelete = null;
+      state.nextKey = "";
       persist();
       fillStatic();
-      setMode("plan");
+      setMode(keepSheet ? "sheet" : "plan");
       renderAll();
-      setStatus(skipped
-        ? "已帶入" + brought + "另外 " + skipped + " 次是這個位置上其他職業的技能，沒帶進來。"
-        : "已帶入" + brought, 12000);
+      setSheetMsg(message);
+      setStatus(message, 12000);
     }).catch(function (error) {
+      if (token !== axisToken) return;
+      setSheetJob(previousJob);
+      setPlanJob(previousJob);
       const message = error && error.message ? error.message : "";
-      if (message.indexOf("時間軸") >= 0 || message.indexOf("沒有") >= 0 || message.indexOf("備份") >= 0 || message.indexOf("start.bat") >= 0) setStatus(message, 12000);
-      else setStatus("讀不到時間軸。請確認 start.bat 還開著，並連上網。機制名稱要向 mit.xivtc.com 要。", 12000);
+      if (message.indexOf("時間軸") >= 0 || message.indexOf("沒有") >= 0 || message.indexOf("備份") >= 0 || message.indexOf("start.bat") >= 0) {
+        setSheetMsg(message);
+        setStatus(message, 12000);
+      } else {
+        setSheetMsg("讀不到時間軸。請確認 start.bat 還開著，並連上網。");
+        setStatus("讀不到時間軸。請確認 start.bat 還開著，並連上網。機制名稱要向 mit.xivtc.com 要。", 12000);
+      }
     }).then(function () {
-      button.disabled = false;
+      if (go) go.disabled = false;
     });
+  }
+
+  function importMit() {
+    const raidId = document.getElementById("mit-raid").dataset.raid;
+    const pick = document.getElementById("mit-job").dataset.pick || "";
+    const parts = pick.split("|");
+    const role = parts[0] || "";
+    const onlyJob = parts.slice(1).join("|");
+    importAxis(raidId, role, onlyJob, false);
   }
 
   function fetchJson(url) {
