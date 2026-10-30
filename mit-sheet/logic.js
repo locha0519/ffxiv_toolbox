@@ -530,6 +530,203 @@
     return JSON.stringify(normalizePlan(plan), null, 2) + "\n";
   }
 
+  const ROLE_SLOTS = ["MT", "ST", "H1", "H2", "D1", "D2", "D3", "D4"];
+
+  function isMitBackup(raw) {
+    return !!(raw && typeof raw === "object" && raw.assignments && typeof raw.assignments === "object" && !Array.isArray(raw.casts));
+  }
+
+  function splitInstanceId(key) {
+    const at = String(key).lastIndexOf("#");
+    if (at <= 0) return null;
+    const slot = Number(key.slice(at + 1));
+    if (!Number.isInteger(slot) || slot < 0 || slot > 7) return null;
+    return { skillId: key.slice(0, at), slot: slot };
+  }
+
+  function mitBackupChoices(backup) {
+    const assignments = (backup && backup.assignments) || {};
+    const raids = [];
+    Object.keys(assignments).forEach(function (raidId) {
+      const phases = assignments[raidId] || {};
+      const byRole = {};
+      ROLE_SLOTS.forEach(function (role, slot) {
+        byRole[role] = { role: role, slot: slot, casts: 0, job: "" };
+      });
+      Object.keys(phases).forEach(function (phaseId) {
+        const map = phases[phaseId] || {};
+        Object.keys(map).forEach(function (key) {
+          const parsed = splitInstanceId(key);
+          if (!parsed || !byRole[ROLE_SLOTS[parsed.slot]]) return;
+          const list = map[key];
+          if (Array.isArray(list)) byRole[ROLE_SLOTS[parsed.slot]].casts += list.length;
+        });
+      });
+      const party = (backup.parties && backup.parties[raidId]) || backup.party || [];
+      party.forEach(function (member) {
+        if (member && byRole[member.role]) byRole[member.role].job = String(member.job || "");
+      });
+      const roles = ROLE_SLOTS.map(function (role) { return byRole[role]; }).filter(function (item) { return item.casts > 0; });
+      if (!roles.length) return;
+      raids.push({
+        id: raidId,
+        casts: roles.reduce(function (sum, item) { return sum + item.casts; }, 0),
+        roles: roles
+      });
+    });
+    const settings = (backup && backup.settings) || {};
+    const defaultRaid = settings.raid && raids.some(function (raid) { return raid.id === settings.raid; })
+      ? settings.raid
+      : ((raids[0] && raids[0].id) || "");
+    const raid = raids.find(function (item) { return item.id === defaultRaid; });
+    let defaultRole = settings.myRole || "";
+    if (!raid || !raid.roles.some(function (item) { return item.role === defaultRole; })) {
+      defaultRole = raid && raid.roles[0] ? raid.roles[0].role : "";
+    }
+    return {
+      raids: raids,
+      defaultRaid: defaultRaid,
+      defaultRole: defaultRole,
+      leadSec: clampLead(settings.macroLeadSec == null ? 2 : settings.macroLeadSec)
+    };
+  }
+
+  function castOffsetOf(map, instanceId, idx) {
+    if (!map) return 0;
+    const value = map[instanceId + "@" + idx];
+    if (typeof value !== "number" || !isFinite(value) || value <= 0 || value > 120 || Math.floor(value) !== value) return 0;
+    return value;
+  }
+
+  function phaseStarts(raid, phaseBodies, gaps) {
+    const order = (raid.phases || []).map(function (phase) { return phase.id; });
+    const lengths = {};
+    order.forEach(function (id) {
+      const actions = (phaseBodies[id] && phaseBodies[id].actions) || [];
+      let max = 0;
+      actions.forEach(function (action) {
+        if (typeof action.timeSec === "number" && action.timeSec > max) max = action.timeSec;
+      });
+      lengths[id] = max;
+    });
+    const starts = {};
+    let cursor = 0;
+    for (let i = 0; i < order.length; i += 1) {
+      starts[order[i]] = cursor;
+      const next = order[i + 1];
+      if (!next) break;
+      const gap = gaps && gaps[next] != null ? Number(gaps[next]) || 0 : 0;
+      const delta = (lengths[order[i]] || 0) + gap;
+      cursor = Math.max(cursor, cursor + delta);
+    }
+    return starts;
+  }
+
+  // bundle: { raid, skills, phases:{ phaseId: timeline }, gaps, jobLabel }
+  // 時間跟減傷表同一套：階段起點 + 機制 timeSec + 那一格的 castOffset。
+  function mitPlanFromBackup(backup, raidId, role, bundle) {
+    if (!isMitBackup(backup)) throw new Error("這不是減傷表備份");
+    const choices = mitBackupChoices(backup);
+    const raidChoice = choices.raids.find(function (item) { return item.id === raidId; });
+    if (!raidChoice) throw new Error("這份備份裡沒有這一場");
+    const roleChoice = raidChoice.roles.find(function (item) { return item.role === role; });
+    if (!roleChoice) throw new Error("這個位置沒有排技能");
+    const raid = bundle.raid || { id: raidId, phases: [] };
+    const skillRows = bundle.skills || [];
+    const bySkillId = {};
+    skillRows.forEach(function (skill) { if (skill && skill.id) bySkillId[skill.id] = skill; });
+    const phaseBodies = bundle.phases || {};
+    const savedGaps = backup.settings && backup.settings.phaseGaps && backup.settings.phaseGaps[raidId];
+    const gaps = Object.assign({}, raid.defaultPhaseGaps || {}, savedGaps || {});
+    const starts = phaseStarts(raid, phaseBodies, gaps);
+    const order = (raid.phases || []).map(function (phase) { return phase.id; });
+    const labels = {};
+    (raid.phases || []).forEach(function (phase) { labels[phase.id] = phase.label || phase.id; });
+    const used = [];
+    let skippedOtherJob = 0;
+    order.forEach(function (phaseId) {
+      const assigned = (((backup.assignments || {})[raidId] || {})[phaseId]) || {};
+      const offsets = (((backup.castOffsets || {})[raidId] || {})[phaseId]) || {};
+      const actions = (phaseBodies[phaseId] && phaseBodies[phaseId].actions) || [];
+      const byIdx = {};
+      actions.forEach(function (action) {
+        if (action && typeof action.idx === "number") byIdx[action.idx] = action;
+      });
+      Object.keys(assigned).forEach(function (key) {
+        const parsed = splitInstanceId(key);
+        if (!parsed || parsed.slot !== roleChoice.slot) return;
+        const sourceJob = bySkillId[parsed.skillId] && bySkillId[parsed.skillId].job;
+        if (roleChoice.job && sourceJob && sourceJob !== roleChoice.job) {
+          if (Array.isArray(assigned[key])) skippedOtherJob += assigned[key].length;
+          return;
+        }
+        const list = assigned[key];
+        if (!Array.isArray(list)) return;
+        list.forEach(function (idx) {
+          const action = byIdx[idx];
+          if (!action || typeof action.timeSec !== "number") return;
+          const offset = castOffsetOf(offsets, key, idx);
+          used.push({
+            phaseId: phaseId,
+            skillId: parsed.skillId,
+            time: starts[phaseId] + action.timeSec + offset,
+            mechanicTime: starts[phaseId] + action.timeSec,
+            note: String(action.actionTC || action.actionJP || "").trim()
+          });
+        });
+      });
+    });
+    if (!used.length) throw new Error("時間軸上對不到這些技能");
+    const phaseIds = [];
+    used.forEach(function (item) {
+      if (phaseIds.indexOf(item.phaseId) < 0) phaseIds.push(item.phaseId);
+    });
+    const skills = [];
+    const seenSkills = {};
+    used.forEach(function (item) {
+      if (seenSkills[item.skillId]) return;
+      seenSkills[item.skillId] = true;
+      const source = bySkillId[item.skillId] || {};
+      const skill = normalizeSkill({
+        id: item.skillId,
+        name: source.nameTC || source.name || item.skillId,
+        cooldown: source.recastSec || source.cooldown || 1,
+        duration: source.durationSec != null ? source.durationSec : (source.duration || 0),
+        charges: source.charges || 1
+      });
+      if (skill) skills.push(skill);
+    });
+    const mechanics = [];
+    const seenMech = {};
+    const casts = [];
+    used.forEach(function (item) {
+      const note = (phaseIds.length > 1 && labels[item.phaseId] ? labels[item.phaseId] + " " : "") + item.note;
+      const mechKey = item.phaseId + "@" + item.mechanicTime + "@" + note;
+      if (!seenMech[mechKey] && item.note) {
+        seenMech[mechKey] = true;
+        mechanics.push({ id: createId(), time: item.mechanicTime, name: note });
+      }
+      casts.push({
+        id: createId(),
+        time: item.time,
+        skillId: item.skillId,
+        note: note
+      });
+    });
+    const shortName = (raid.shortName || raid.name || raidId);
+    const jobLabel = bundle.jobLabel || roleChoice.job || "";
+    const plan = normalizePlan({
+      name: (shortName + " " + role + (jobLabel ? " " + jobLabel : "")).trim(),
+      leadSec: choices.leadSec,
+      jobId: roleChoice.job || "",
+      skills: skills,
+      mechanics: mechanics,
+      casts: casts
+    });
+    plan.skippedOtherJob = skippedOtherJob;
+    return plan;
+  }
+
   function importJson(text) {
     let raw;
     try {
@@ -600,6 +797,9 @@
     cactbotText: cactbotText,
     exportJson: exportJson,
     importJson: importJson,
+    isMitBackup: isMitBackup,
+    mitBackupChoices: mitBackupChoices,
+    mitPlanFromBackup: mitPlanFromBackup,
     parseCountdown: parseCountdown,
     parseEngage: parseEngage,
     safeFile: safeFile,

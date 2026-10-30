@@ -102,7 +102,8 @@ body.mode-sheet .top,
 body.mode-sheet .toolbar,
 body.mode-sheet .help,
 body.mode-sheet .demo-note,
-body.mode-sheet .status {
+body.mode-sheet .status,
+body.mode-sheet .mit-import {
   display: none;
 }
 
@@ -146,6 +147,21 @@ textarea { width: 100%; resize: vertical; }
 .status:empty { display: none; }
 
 .demo-note { color: var(--gold); }
+
+.help-steps { margin-top: 0; }
+.help-steps summary { cursor: pointer; color: var(--text); }
+.help-steps ol { margin: 8px 0 0; padding-left: 1.3em; }
+.help-steps li { margin: 4px 0; }
+
+.mit-import {
+  margin: 8px 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--gold);
+  border-radius: 14px;
+  background: #241c16;
+}
+.mit-import[hidden] { display: none !important; }
+.mit-import p { margin: 0 0 8px; }
 
 .help code {
   color: var(--text);

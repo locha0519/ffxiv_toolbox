@@ -149,4 +149,70 @@ assert.strictEqual(jobPlan.casts[1].skillName, "舊技能");
 
 assert.strictEqual(L.parseCountdown("00|2026-01-01T00:00:00.0000000+08:00|0038||Battle commencing in 9 seconds!"), 9);
 
+const mitBackup = {
+  __v: 2,
+  party: [{ role: "H1", job: "WHM" }],
+  parties: { m6s: [{ role: "H1", job: "WHM" }, { role: "D1", job: "MNK" }] },
+  assignments: {
+    m6s: { p1: { "WHM_00#2": [1, 4], "AST_00#2": [1], "MNK_00#4": [1] } },
+    m5s: { p1: { "WHM_00#2": [0] } }
+  },
+  castOffsets: { m6s: { p1: { "WHM_00#2@1": 3, "WHM_00#2@9": 99 } } },
+  settings: { raid: "m6s", myRole: "H1", macroLeadSec: 2, phaseGaps: {} }
+};
+assert.strictEqual(L.isMitBackup(mitBackup), true);
+assert.strictEqual(L.isMitBackup(macroPlan), false);
+const choices = L.mitBackupChoices(mitBackup);
+assert.strictEqual(choices.defaultRaid, "m6s");
+assert.strictEqual(choices.defaultRole, "H1");
+assert.strictEqual(choices.raids.find((raid) => raid.id === "m6s").roles.find((role) => role.role === "H1").casts, 3);
+
+const mitPlan = L.mitPlanFromBackup(mitBackup, "m6s", "H1", {
+  raid: { id: "m6s", shortName: "M6S", phases: [{ id: "p1", label: "P1" }], defaultPhaseGaps: {} },
+  jobLabel: "白魔法師",
+  skills: [
+    { id: "WHM_00", nameTC: "節制", recastSec: 120, durationSec: 20, charges: 1, job: "WHM" },
+    { id: "AST_00", nameTC: "命運之輪", recastSec: 60, durationSec: 18, charges: 1, job: "AST" }
+  ],
+  phases: {
+    p1: { actions: [
+      { idx: 1, timeSec: 32, actionTC: "雙重攻擊" },
+      { idx: 4, timeSec: 70, actionTC: "分散" }
+    ] }
+  }
+});
+assert.strictEqual(mitPlan.name, "M6S H1 白魔法師");
+assert.strictEqual(mitPlan.jobId, "WHM");
+assert.strictEqual(mitPlan.leadSec, 2);
+assert.strictEqual(mitPlan.casts.length, 2);
+assert.strictEqual(mitPlan.casts[0].time, 35);
+assert.strictEqual(mitPlan.casts[0].note, "雙重攻擊");
+assert.strictEqual(mitPlan.casts[1].time, 70);
+assert.strictEqual(mitPlan.skills.length, 1);
+assert.strictEqual(mitPlan.skills[0].name, "節制");
+assert.ok(!mitPlan.casts.some((cast) => cast.skillId === "MNK_00"));
+assert.ok(!mitPlan.casts.some((cast) => cast.skillId === "AST_00"));
+assert.strictEqual(mitPlan.skippedOtherJob, 1);
+
+const phased = L.mitPlanFromBackup({
+  assignments: { fru: { p1: { "PLD_00#0": [0] }, p2: { "PLD_00#0": [0] } } },
+  settings: { raid: "fru", myRole: "MT", macroLeadSec: 1, phaseGaps: { fru: { p2: 10 } } },
+  parties: { fru: [{ role: "MT", job: "PLD" }] }
+}, "fru", "MT", {
+  raid: {
+    id: "fru", shortName: "絕伊甸",
+    phases: [{ id: "p1", label: "P1" }, { id: "p2", label: "P2" }],
+    defaultPhaseGaps: { p2: 99 }
+  },
+  skills: [{ id: "PLD_00", nameTC: "雪仇", recastSec: 60, durationSec: 15, charges: 1 }],
+  phases: {
+    p1: { actions: [{ idx: 0, timeSec: 100, actionTC: "前段" }] },
+    p2: { actions: [{ idx: 0, timeSec: 5, actionTC: "後段" }] }
+  }
+});
+assert.strictEqual(phased.casts[0].time, 100);
+assert.strictEqual(phased.casts[1].time, 115);
+assert.ok(phased.casts[1].note.indexOf("後段") >= 0);
+assert.ok(phased.casts[1].note.indexOf("P2") >= 0);
+
 console.log("logic.test.js ok");

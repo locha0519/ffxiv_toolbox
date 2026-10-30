@@ -24,7 +24,10 @@
     spoken: new Set(),
     lastFocusId: null,
     pendingDelete: null,
-    ticking: false
+    ticking: false,
+    mitBackup: null,
+    mitChoices: null,
+    mitNames: {}
   };
 
   const fightName = document.getElementById("fight-name");
@@ -463,6 +466,8 @@
     else if (act === "copy") copySheet();
     else if (act === "download") downloadKind(node.dataset.kind);
     else if (act === "import") document.getElementById("import-file").click();
+    else if (act === "mit-go") importMit();
+    else if (act === "mit-cancel") cancelMit();
     else if (act === "paste-add") pasteMechanics(false);
     else if (act === "paste-replace") pasteMechanics(true);
     else if (act === "practice") startPractice();
@@ -509,6 +514,8 @@
       mech.time = time;
       state.plan.mechanics = L.sortedByTime(state.plan.mechanics);
       touch();
+    } else if (act === "mit-raid") {
+      fillMitRoles();
     } else if (act === "mech-name") {
       const mech = state.plan.mechanics.find(function (item) { return item.id === id; });
       if (!mech) return;
@@ -731,8 +738,22 @@
     if (!file) return;
     const reader = new FileReader();
     reader.onload = function () {
+      let raw;
+      try { raw = JSON.parse(String(reader.result)); }
+      catch (error) { setStatus("這個檔案不是排軸檔"); return; }
+      if (L.isMitBackup(raw)) {
+        const choices = L.mitBackupChoices(raw);
+        if (!choices.raids.length) {
+          setStatus("這份備份裡還沒有排好的技能。");
+          return;
+        }
+        state.mitBackup = raw;
+        state.mitChoices = choices;
+        showMitPicker();
+        return;
+      }
       try {
-        state.plan = L.importJson(String(reader.result));
+        state.plan = L.importJson(JSON.stringify(raw));
         state.armed = null;
         persist();
         fillStatic();
@@ -743,6 +764,124 @@
       }
     };
     reader.readAsText(file);
+  }
+
+  function showMitPicker() {
+    document.getElementById("mit-import").hidden = false;
+    fillMitRaids();
+    setMode("plan");
+    fetchJson("https://mit.xivtc.com/data/raids.json").then(function (manifest) {
+      state.mitNames = {};
+      (manifest.raids || []).forEach(function (raid) {
+        state.mitNames[raid.id] = raid.shortName || raid.name || raid.id;
+      });
+      if (state.mitBackup) fillMitRaids();
+    }).catch(function () { /* 沒連上就先用副本代號 */ });
+  }
+
+  function fillMitRaids() {
+    const select = document.getElementById("mit-raid");
+    const current = select.value || (state.mitChoices && state.mitChoices.defaultRaid) || "";
+    clear(select);
+    (state.mitChoices.raids || []).forEach(function (raid) {
+      const option = document.createElement("option");
+      option.value = raid.id;
+      const label = (state.mitNames && state.mitNames[raid.id]) || raid.id;
+      option.textContent = label + "（" + raid.casts + "）";
+      select.appendChild(option);
+    });
+    const ids = state.mitChoices.raids.map(function (raid) { return raid.id; });
+    select.value = ids.indexOf(current) >= 0 ? current : state.mitChoices.defaultRaid;
+    fillMitRoles();
+  }
+
+  function fillMitRoles() {
+    const raidId = document.getElementById("mit-raid").value;
+    const raid = (state.mitChoices.raids || []).find(function (item) { return item.id === raidId; });
+    const select = document.getElementById("mit-role");
+    const previous = select.value;
+    clear(select);
+    if (!raid) return;
+    raid.roles.forEach(function (role) {
+      const option = document.createElement("option");
+      option.value = role.role;
+      const known = Skills.byId(role.job);
+      const jobName = known ? known.name : role.job;
+      option.textContent = role.role + (jobName ? " " + jobName : "") + "（" + role.casts + "）";
+      select.appendChild(option);
+    });
+    const roles = raid.roles.map(function (role) { return role.role; });
+    if (roles.indexOf(previous) >= 0) select.value = previous;
+    else if (roles.indexOf(state.mitChoices.defaultRole) >= 0) select.value = state.mitChoices.defaultRole;
+    else select.value = roles[0];
+  }
+
+  function cancelMit() {
+    state.mitBackup = null;
+    document.getElementById("mit-import").hidden = true;
+  }
+
+  function importMit() {
+    const raidId = document.getElementById("mit-raid").value;
+    const role = document.getElementById("mit-role").value;
+    if (!state.mitBackup || !raidId || !role) return;
+    const button = document.querySelector('[data-act="mit-go"]');
+    button.disabled = true;
+    setStatus("正在讀時間軸…");
+    loadMitBundle(raidId).then(function (bundle) {
+      const raid = state.mitChoices.raids.find(function (item) { return item.id === raidId; });
+      const roleRow = raid && raid.roles.find(function (item) { return item.role === role; });
+      const known = roleRow && Skills.byId(roleRow.job);
+      bundle.jobLabel = known ? known.name : ((roleRow && roleRow.job) || "");
+      state.plan = L.mitPlanFromBackup(state.mitBackup, raidId, role, bundle);
+      const skipped = state.plan.skippedOtherJob || 0;
+      const brought = state.plan.name + "，" + state.plan.casts.length + " 次施放。";
+      state.mitBackup = null;
+      state.armed = null;
+      document.getElementById("mit-import").hidden = true;
+      persist();
+      fillStatic();
+      setMode("plan");
+      renderAll();
+      setStatus(skipped
+        ? "已帶入" + brought + "另外 " + skipped + " 次是這個位置上其他職業的技能，沒帶進來。"
+        : "已帶入" + brought);
+    }).catch(function (error) {
+      const message = error && error.message ? error.message : "";
+      if (message.indexOf("時間軸") >= 0 || message.indexOf("沒有") >= 0 || message.indexOf("備份") >= 0) setStatus(message);
+      else setStatus("讀不到時間軸。請連上網，機制名稱要向 mit.xivtc.com 要。");
+    }).then(function () {
+      button.disabled = false;
+    });
+  }
+
+  function fetchJson(url) {
+    return fetch(url).then(function (res) {
+      if (!res.ok) throw new Error("讀取失敗 " + res.status);
+      return res.json();
+    });
+  }
+
+  function loadMitBundle(raidId) {
+    return fetchJson("https://mit.xivtc.com/data/raids.json").then(function (manifest) {
+      const raid = (manifest.raids || []).find(function (item) { return item.id === raidId; });
+      if (!raid) throw new Error("減傷表沒有這個副本");
+      const phaseIds = (raid.phases || []).map(function (phase) { return phase.id; });
+      return Promise.all([
+        fetchJson("https://mit.xivtc.com/data/raids/" + raidId + "/skills.json"),
+        Promise.all(phaseIds.map(function (id) {
+          return fetchJson("https://mit.xivtc.com/data/raids/" + raidId + "/timeline/" + id + ".json").then(function (body) {
+            return [id, body];
+          }).catch(function () {
+            return [id, { actions: [] }];
+          });
+        }))
+      ]).then(function (parts) {
+        const phases = {};
+        parts[1].forEach(function (pair) { phases[pair[0]] = pair[1]; });
+        return { raid: raid, skills: parts[0].skills || [], phases: phases };
+      });
+    });
   }
 
   function elapsed() {

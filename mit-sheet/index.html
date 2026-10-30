@@ -33,13 +33,36 @@
     <button type="button" data-act="download" data-kind="macro">遊戲巨集</button>
     <button type="button" data-act="download" data-kind="act" title="匯入 Triggernometry，倒數後用語音念技能">ACT 語音</button>
     <button type="button" data-act="download" data-kind="cactbot" title="給 cactbot 的時間軸，不是 Triggernometry">時間軸</button>
-    <button type="button" data-act="import">匯入</button>
+    <button type="button" data-act="import" title="小抄 json，或減傷表網站下載的整包備份">匯入</button>
     <input id="import-file" type="file" accept="application/json,.json" hidden>
     <button type="button" id="clear-plan" data-act="clear">清空這場</button>
   </div>
   <p id="status" class="status" role="status"></p>
   <p id="demo-note" class="demo-note" hidden>這是示範。表上的時間是按下技能的時間，提醒會再早幾秒。可以改，或按清空這場重排。</p>
-  <p class="help">ACT 語音：把「ACT 語音」下載的 xml 匯入 Triggernometry。進本倒數會預約語音，團滅再倒數會取消上一輪。畫面上的大字：先點 start.bat，OverlayPlugin 的網址填 <code id="origin-url">http://127.0.0.1:8766/</code>。排軸存在這個網址上，重新整理還在。</p>
+  <p class="help">畫面上的大字：先點 start.bat，OverlayPlugin 的網址填 <code id="origin-url">http://127.0.0.1:8766/</code>。排軸存在這個網址上。減傷表網站下載的整包備份也可以按匯入，只會帶你自己要按的技能。</p>
+  <details class="help help-steps">
+    <summary>ACT 語音（Triggernometry）怎麼設定</summary>
+    <ol>
+      <li>ACT 要先裝好 FFXIV 戰鬥插件。Plugins → Plugin Listing，搜尋 Triggernometry，安裝後重開 ACT。</li>
+      <li>這頁排好，或匯入減傷表備份，按「ACT 語音」下載 xml。</li>
+      <li>打開 Triggernometry，上方 Import，選剛剛的 xml。左邊出現這個副本的資料夾，確認有勾啟用。</li>
+      <li>Triggernometry 的 TTS 選一個中文語音。Windows 可以用 Microsoft Hanhan Desktop。</li>
+      <li>進本倒數（日誌 00:0038，Battle commencing 或帶「秒」的那行）會開始預約。團滅再倒數會取消上一輪。</li>
+    </ol>
+  </details>
+  <div id="mit-import" class="mit-import" hidden>
+    <p>這是減傷表的整包備份。選一場和你的位置，只帶你自己要按的技能。機制名稱會從 mit.xivtc.com 讀。</p>
+    <div class="row">
+      <label>副本
+        <select id="mit-raid" data-act="mit-raid" aria-label="要帶入的副本"></select>
+      </label>
+      <label>位置
+        <select id="mit-role" aria-label="要帶入的位置"></select>
+      </label>
+      <button type="button" data-act="mit-go">帶進小抄</button>
+      <button type="button" data-act="mit-cancel">取消</button>
+    </div>
+  </div>
 
   <div id="plan" class="plan">
     <aside class="skills-panel">
@@ -69,7 +92,7 @@
       <div id="timeline"></div>
       <div id="cast-list"></div>
       <details class="mech" open>
-        <summary>老闆機制（選填，用來對照。戰鬥小抄只列你要按的技能）</summary>
+        <summary>boss 機制（選填，用來對照。戰鬥小抄只列你要按的技能）</summary>
         <form id="mech-form" class="row">
           <input name="time" type="text" placeholder="0:32" aria-label="機制時間" autocomplete="off">
           <input name="name" type="text" placeholder="機制名稱" maxlength="40" aria-label="機制名稱" autocomplete="off">
