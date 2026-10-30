@@ -339,7 +339,7 @@ body.mode-sheet .sheet { margin-top: 16px; }
 .hero.now { background: rgba(226, 184, 106, 0.14); border-color: var(--gold); }
 
 #hero-kicker, #hero-note, #hero-warn { margin: 0; }
-#hero-kicker { color: var(--gold); letter-spacing: 0.14em; font-size: 18px; }
+#hero-kicker { color: var(--gold); letter-spacing: 0.08em; font-size: 32px; }
 #hero-skill {
   margin: 6px 0;
   font-size: clamp(56px, 9vw, 112px);

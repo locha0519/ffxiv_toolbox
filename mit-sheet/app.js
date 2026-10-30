@@ -15,13 +15,10 @@
     armed: null,
     mode: ui.mode === "sheet" ? "sheet" : "plan",
     group: ui.group === "skill" ? "skill" : "time",
-    speech: ui.speech === true,
-    speechTouched: ui.speechTouched === true,
     overlay: false,
     overlayHooked: false,
     suppressClick: false,
     clock: { zeroAt: null, paused: null, source: "idle" },
-    spoken: new Set(),
     lastFocusId: null,
     pendingDelete: null,
     ticking: false,
@@ -32,7 +29,6 @@
 
   const fightName = document.getElementById("fight-name");
   const leadInput = document.getElementById("lead");
-  const speechInput = document.getElementById("speech");
   const jobSelect = document.getElementById("job");
 
   bind();
@@ -61,9 +57,7 @@
   function saveUi() {
     localStorage.setItem(UIKEY, JSON.stringify({
       mode: state.mode,
-      group: state.group,
-      speech: state.speech,
-      speechTouched: state.speechTouched
+      group: state.group
     }));
   }
 
@@ -90,11 +84,6 @@
       leadInput.value = String(state.plan.leadSec);
       state.plan.demo = false;
       persist();
-    });
-    speechInput.addEventListener("change", function () {
-      state.speech = speechInput.checked;
-      state.speechTouched = true;
-      saveUi();
     });
     document.getElementById("import-file").addEventListener("change", onImport);
     document.addEventListener("keydown", onKey);
@@ -127,7 +116,6 @@
   function fillStatic() {
     fightName.value = state.plan.name || "";
     leadInput.value = String(state.plan.leadSec);
-    speechInput.checked = state.speech;
     if (state.plan.jobId && Skills.byId(state.plan.jobId)) jobSelect.value = state.plan.jobId;
     document.title = state.plan.name ? state.plan.name + " · 排軸小抄" : "排軸小抄";
     updateDemoNote();
@@ -739,17 +727,18 @@
     const reader = new FileReader();
     reader.onload = function () {
       let raw;
-      try { raw = JSON.parse(String(reader.result)); }
-      catch (error) { setStatus("這個檔案不是排軸檔"); return; }
+      try { raw = JSON.parse(String(reader.result).replace(/^\uFEFF/, "")); }
+      catch (error) { setStatus("這個檔案不是排軸檔", 12000); return; }
       if (L.isMitBackup(raw)) {
         const choices = L.mitBackupChoices(raw);
         if (!choices.raids.length) {
-          setStatus("這份備份裡還沒有排好的技能。");
+          setStatus("這份備份裡還沒有排好的技能。", 12000);
           return;
         }
         state.mitBackup = raw;
         state.mitChoices = choices;
         showMitPicker();
+        importMit();
         return;
       }
       try {
@@ -770,7 +759,8 @@
     document.getElementById("mit-import").hidden = false;
     fillMitRaids();
     setMode("plan");
-    fetchJson("https://mit.xivtc.com/data/raids.json").then(function (manifest) {
+    if (location.protocol === "file:") return;
+    fetchJson(mitUrl("raids.json")).then(function (manifest) {
       state.mitNames = {};
       (manifest.raids || []).forEach(function (raid) {
         state.mitNames[raid.id] = raid.shortName || raid.name || raid.id;
@@ -822,34 +812,38 @@
   }
 
   function importMit() {
+    const backup = state.mitBackup;
     const raidId = document.getElementById("mit-raid").value;
     const role = document.getElementById("mit-role").value;
-    if (!state.mitBackup || !raidId || !role) return;
+    if (!backup || !raidId || !role) return;
+    if (location.protocol === "file:") {
+      setStatus("請先雙擊 start.bat，用瀏覽器開 http://127.0.0.1:8766/ 再匯入。直接開檔案讀不到機制名稱。", 12000);
+      return;
+    }
     const button = document.querySelector('[data-act="mit-go"]');
     button.disabled = true;
-    setStatus("正在讀時間軸…");
+    setStatus("正在讀時間軸…", 20000);
     loadMitBundle(raidId).then(function (bundle) {
+      if (state.mitBackup !== backup) return;
       const raid = state.mitChoices.raids.find(function (item) { return item.id === raidId; });
       const roleRow = raid && raid.roles.find(function (item) { return item.role === role; });
       const known = roleRow && Skills.byId(roleRow.job);
       bundle.jobLabel = known ? known.name : ((roleRow && roleRow.job) || "");
-      state.plan = L.mitPlanFromBackup(state.mitBackup, raidId, role, bundle);
+      state.plan = L.mitPlanFromBackup(backup, raidId, role, bundle);
       const skipped = state.plan.skippedOtherJob || 0;
       const brought = state.plan.name + "，" + state.plan.casts.length + " 次施放。";
-      state.mitBackup = null;
       state.armed = null;
-      document.getElementById("mit-import").hidden = true;
       persist();
       fillStatic();
       setMode("plan");
       renderAll();
       setStatus(skipped
         ? "已帶入" + brought + "另外 " + skipped + " 次是這個位置上其他職業的技能，沒帶進來。"
-        : "已帶入" + brought);
+        : "已帶入" + brought, 12000);
     }).catch(function (error) {
       const message = error && error.message ? error.message : "";
-      if (message.indexOf("時間軸") >= 0 || message.indexOf("沒有") >= 0 || message.indexOf("備份") >= 0) setStatus(message);
-      else setStatus("讀不到時間軸。請連上網，機制名稱要向 mit.xivtc.com 要。");
+      if (message.indexOf("時間軸") >= 0 || message.indexOf("沒有") >= 0 || message.indexOf("備份") >= 0 || message.indexOf("start.bat") >= 0) setStatus(message, 12000);
+      else setStatus("讀不到時間軸。請確認 start.bat 還開著，並連上網。機制名稱要向 mit.xivtc.com 要。", 12000);
     }).then(function () {
       button.disabled = false;
     });
@@ -862,15 +856,22 @@
     });
   }
 
+  function mitUrl(rel) {
+    return "/api/mit/" + String(rel || "").replace(/^\/+/, "");
+  }
+
   function loadMitBundle(raidId) {
-    return fetchJson("https://mit.xivtc.com/data/raids.json").then(function (manifest) {
+    if (location.protocol === "file:") {
+      return Promise.reject(new Error("請先雙擊 start.bat，用瀏覽器開 http://127.0.0.1:8766/ 再匯入。"));
+    }
+    return fetchJson(mitUrl("raids.json")).then(function (manifest) {
       const raid = (manifest.raids || []).find(function (item) { return item.id === raidId; });
       if (!raid) throw new Error("減傷表沒有這個副本");
       const phaseIds = (raid.phases || []).map(function (phase) { return phase.id; });
       return Promise.all([
-        fetchJson("https://mit.xivtc.com/data/raids/" + raidId + "/skills.json"),
+        fetchJson(mitUrl("raids/" + raidId + "/skills.json")),
         Promise.all(phaseIds.map(function (id) {
-          return fetchJson("https://mit.xivtc.com/data/raids/" + raidId + "/timeline/" + id + ".json").then(function (body) {
+          return fetchJson(mitUrl("raids/" + raidId + "/timeline/" + id + ".json")).then(function (body) {
             return [id, body];
           }).catch(function () {
             return [id, { actions: [] }];
@@ -896,7 +897,6 @@
       return;
     }
     state.clock = { zeroAt: Date.now(), paused: null, source: "practice" };
-    state.spoken.clear();
     state.lastFocusId = null;
     setMode("sheet");
     ensureTick();
@@ -916,7 +916,6 @@
 
   function resetClock() {
     state.clock = { zeroAt: null, paused: null, source: "idle" };
-    state.spoken.clear();
     state.lastFocusId = null;
     paintSheet();
   }
@@ -968,7 +967,6 @@
       note.textContent = focus.note || "";
       warn.textContent = issues[focus.id] ? "這次排太早，冷卻還差 " + Math.ceil(issues[focus.id].short) + " 秒" : "";
     }
-    if (now != null) casts.forEach(function (cast) { maybeSpeak(cast, now, lead); });
     const items = document.querySelectorAll("#sheet-list li");
     items.forEach(function (item) {
       const cast = casts.find(function (entry) { return entry.id === item.dataset.id; });
@@ -985,45 +983,8 @@
     }
   }
 
-  function maybeSpeak(cast, now, lead) {
-    if (!state.speech || state.spoken.has(cast.id)) return;
-    const start = cast.time - lead;
-    if (now >= start && now <= start + 1.6) {
-      state.spoken.add(cast.id);
-      speak("開" + L.skillName(state.plan, cast));
-    }
-  }
-
-  function speak(text) {
-    if (!window.speechSynthesis) return;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "zh-TW";
-    const voices = speechSynthesis.getVoices();
-    const voice = voices.filter(function (item) { return item.lang === "zh-TW"; })[0]
-      || voices.filter(function (item) { return item.lang && item.lang.indexOf("zh") === 0; })[0];
-    if (voice) utterance.voice = voice;
-    speechSynthesis.speak(utterance);
-  }
-
-  function markSpoken() {
-    state.spoken.clear();
-    const now = elapsed();
-    if (now == null) return;
-    const lead = state.plan.leadSec;
-    L.sortedByTime(state.plan.casts).forEach(function (cast) {
-      if (cast.time - lead < now - 1.2) state.spoken.add(cast.id);
-    });
-  }
-
   function adoptActClock(zeroAt) {
-    const previous = state.clock;
-    const fresh = previous.source !== "act" || previous.zeroAt == null || Math.abs(previous.zeroAt - zeroAt) > 2000;
     state.clock = { zeroAt: zeroAt, paused: null, source: "act" };
-    if (fresh) markSpoken();
-    if (!state.speechTouched) {
-      state.speech = true;
-      speechInput.checked = true;
-    }
     if (state.mode !== "sheet") setMode("sheet");
     else {
       paintSheet();
@@ -1086,10 +1047,6 @@
     state.overlay = true;
     document.body.classList.add("as-overlay");
     setMode("sheet");
-    if (!state.speechTouched) {
-      state.speech = true;
-      speechInput.checked = true;
-    }
     paintSheet();
     return true;
   }
@@ -1119,11 +1076,11 @@
   }
 
   let statusTimer = 0;
-  function setStatus(text) {
+  function setStatus(text, ms) {
     const node = document.getElementById("status");
     node.textContent = text;
     clearTimeout(statusTimer);
-    statusTimer = setTimeout(function () { node.textContent = ""; }, 4500);
+    statusTimer = setTimeout(function () { node.textContent = ""; }, ms || 4500);
   }
 
   function download(filename, text, type) {

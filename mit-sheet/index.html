@@ -12,7 +12,7 @@
       <p class="eyebrow">FFXIV · 繁中</p>
       <h1>排軸小抄</h1>
     </div>
-    <p class="lede">只排你自己要按的技能。戰鬥時看大字，不用在減傷表裡找格子。排完可以存檔，也能交給 ACT 在倒數後念給你聽。</p>
+    <p class="lede">只排你自己要按的技能。戰鬥時畫面中間是下一招和倒數，沒有聲音，直播聽不到。不需要 Triggernometry。</p>
   </header>
 
   <div class="toolbar">
@@ -23,35 +23,23 @@
       <button type="button" id="mode-plan" data-act="mode" data-mode="plan" aria-pressed="true">排軸</button>
       <button type="button" id="mode-sheet" data-act="mode" data-mode="sheet" aria-pressed="false">小抄</button>
     </div>
-    <label title="小抄和 ACT 會早這幾秒出聲。表上的時間仍是你按下技能的時間。">提前
+    <label title="小抄會早這幾秒把下一招放大。表上的時間仍是你按下技能的時間。">提前
       <input id="lead" type="number" min="0" max="10" step="0.5" value="2" aria-label="提前提醒秒數">
       秒
     </label>
     <button type="button" data-act="copy">複製小抄</button>
     <button type="button" data-act="download" data-kind="text">下載文字</button>
     <button type="button" data-act="download" data-kind="json">下載排軸</button>
-    <button type="button" data-act="download" data-kind="macro">遊戲巨集</button>
-    <button type="button" data-act="download" data-kind="act" title="匯入 Triggernometry，倒數後用語音念技能">ACT 語音</button>
-    <button type="button" data-act="download" data-kind="cactbot" title="給 cactbot 的時間軸，不是 Triggernometry">時間軸</button>
+    <button type="button" data-act="download" data-kind="macro" title="會寫進遊戲聊天窗，直播看得到。這頁的倒數不會出聲。">遊戲巨集</button>
     <button type="button" data-act="import" title="小抄 json，或減傷表網站下載的整包備份">匯入</button>
     <input id="import-file" type="file" accept="application/json,.json" hidden>
     <button type="button" id="clear-plan" data-act="clear">清空這場</button>
   </div>
   <p id="status" class="status" role="status"></p>
   <p id="demo-note" class="demo-note" hidden>這是示範。表上的時間是按下技能的時間，提醒會再早幾秒。可以改，或按清空這場重排。</p>
-  <p class="help">畫面上的大字：先點 start.bat，OverlayPlugin 的網址填 <code id="origin-url">http://127.0.0.1:8766/</code>。排軸存在這個網址上。減傷表網站下載的整包備份也可以按匯入，只會帶你自己要按的技能。</p>
-  <details class="help help-steps">
-    <summary>ACT 語音（Triggernometry）怎麼設定</summary>
-    <ol>
-      <li>ACT 要先裝好 FFXIV 戰鬥插件。Plugins → Plugin Listing，搜尋 Triggernometry，安裝後重開 ACT。</li>
-      <li>這頁排好，或匯入減傷表備份，按「ACT 語音」下載 xml。</li>
-      <li>打開 Triggernometry，上方 Import，選剛剛的 xml。左邊出現這個副本的資料夾，確認有勾啟用。</li>
-      <li>Triggernometry 的 TTS 選一個中文語音。Windows 可以用 Microsoft Hanhan Desktop。</li>
-      <li>進本倒數（日誌 00:0038，Battle commencing 或帶「秒」的那行）會開始預約。團滅再倒數會取消上一輪。</li>
-    </ol>
-  </details>
+  <p class="help">先點 start.bat。ACT 安裝 OverlayPlugin，新增 Overlay，網址填 <code id="origin-url">http://127.0.0.1:8766/</code>，勾滑鼠穿透。進本倒數後，下一招和倒數會飄在畫面上，沒有聲音。OBS 若是擷取整個螢幕，把這個 Overlay 放在沒被錄到的螢幕，直播就看不到。匯入減傷表備份會直接帶進你那個位置的技能。</p>
   <div id="mit-import" class="mit-import" hidden>
-    <p>這是減傷表的整包備份。選一場和你的位置，只帶你自己要按的技能。機制名稱會從 mit.xivtc.com 讀。</p>
+    <p>選完檔會先帶進備份裡記住的那一場和你的位置。要換場或換位置，選好再按帶進小抄。機制名稱由本機向 mit.xivtc.com 讀。</p>
     <div class="row">
       <label>副本
         <select id="mit-raid" data-act="mit-raid" aria-label="要帶入的副本"></select>
@@ -115,7 +103,7 @@
       <button type="button" data-act="practice">開始練習</button>
       <button type="button" data-act="pause">暫停</button>
       <button type="button" data-act="reset-clock">重來</button>
-      <label class="check"><input id="speech" type="checkbox"> 語音</label>
+      <button type="button" data-act="import">匯入</button>
       <button type="button" data-act="mode" data-mode="plan">回排軸</button>
     </div>
     <div class="hero wait" id="hero">
@@ -125,7 +113,7 @@
       <p id="hero-warn"></p>
     </div>
     <ol id="sheet-list"></ol>
-    <p class="hint sheet-hint">空白鍵開始或暫停練習，R 重來。接到 ACT 後改跟倒數走。</p>
+    <p class="hint sheet-hint">沒有聲音。空白鍵開始或暫停練習，R 重來。接到 ACT 後改跟倒數走。</p>
   </section>
 
   <script src="skills.js"></script>
