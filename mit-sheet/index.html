@@ -32,13 +32,9 @@
       <input id="lead" type="number" min="0" max="10" step="0.5" value="2" aria-label="提前提醒秒數">
       秒
     </label>
-    <button type="button" data-act="copy">複製小抄</button>
-    <button type="button" data-act="download" data-kind="text">下載文字</button>
     <button type="button" data-act="download" data-kind="json">下載排軸</button>
-    <button type="button" data-act="download" data-kind="macro" title="會寫進遊戲聊天窗，直播看得到。這頁的倒數不會出聲。">遊戲巨集</button>
     <button type="button" data-act="import" title="可匯入多份。這場的清單裡選 boss 和職業">匯入</button>
     <input id="import-file" type="file" accept="application/json,.json" hidden>
-    <button type="button" id="clear-plan" data-act="clear">清空這場</button>
   </div>
   <p id="status" class="status" role="status"></p>
   <p id="demo-note" class="demo-note" hidden>這是示範。表上的時間是按下技能的時間，提醒會再早幾秒。可以改，或按清空這場重排。</p>
