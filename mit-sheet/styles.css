@@ -26,10 +26,7 @@ body {
 body.as-overlay.mode-sheet,
 body.preview-overlay.mode-sheet {
   background: transparent;
-}
-
-body.preview-overlay.mode-sheet {
-  background: #100e0c;
+  min-height: 0;
 }
 
 body.as-overlay.mode-sheet .top,
@@ -49,10 +46,55 @@ body.preview-overlay.mode-sheet .sheet-hint {
 
 body.as-overlay.mode-sheet .sheet,
 body.preview-overlay.mode-sheet .sheet {
-  background: transparent;
+  background: rgba(16, 14, 12, 0.46);
   border: 0;
   box-shadow: none;
-  margin: 8px 12px;
+  margin: 8px;
+  padding: 8px 12px 10px;
+  width: min(420px, calc(100vw - 16px));
+}
+
+body.as-overlay.mode-sheet #sheet-list,
+body.preview-overlay.mode-sheet #sheet-list,
+body.as-overlay.mode-sheet .sheet-msg,
+body.preview-overlay.mode-sheet .sheet-msg,
+body.as-overlay.mode-sheet #clock,
+body.preview-overlay.mode-sheet #clock,
+body.as-overlay.mode-sheet #act-status,
+body.preview-overlay.mode-sheet #act-status,
+body.as-overlay.mode-sheet [data-act="practice"],
+body.preview-overlay.mode-sheet [data-act="practice"],
+body.as-overlay.mode-sheet [data-act="pause"],
+body.preview-overlay.mode-sheet [data-act="pause"],
+body.as-overlay.mode-sheet [data-act="reset-clock"],
+body.preview-overlay.mode-sheet [data-act="reset-clock"],
+body.as-overlay.mode-sheet [data-act="import"],
+body.preview-overlay.mode-sheet [data-act="import"] {
+  display: none;
+}
+
+body.as-overlay.mode-sheet .hero,
+body.preview-overlay.mode-sheet .hero {
+  min-height: 0;
+  padding: 2px 2px 6px;
+  background: transparent;
+}
+
+body.as-overlay.mode-sheet #hero-skill,
+body.preview-overlay.mode-sheet #hero-skill {
+  font-size: 64px;
+}
+
+body.as-overlay.mode-sheet #hero-note,
+body.preview-overlay.mode-sheet #hero-note {
+  font-size: 18px;
+}
+
+body.as-overlay.mode-sheet .sheet-bar button,
+body.preview-overlay.mode-sheet .sheet-bar button,
+body.as-overlay.mode-sheet .sheet-bar select,
+body.preview-overlay.mode-sheet .sheet-bar select {
+  background: rgba(20, 17, 14, 0.35);
 }
 
 body.as-overlay.mode-sheet .sheet li,
@@ -371,6 +413,34 @@ body.mode-sheet .sheet { margin-top: 16px; }
 
 #hero-kicker, #hero-note, #hero-warn { margin: 0; }
 #hero-kicker { color: var(--gold); letter-spacing: 0.08em; font-size: 32px; }
+#hero-kicker:empty { display: none; }
+
+.meter {
+  width: min(280px, 100%);
+  height: 12px;
+  margin: 8px 0 2px;
+  border-radius: 999px;
+  background: rgba(246, 239, 228, 0.16);
+  overflow: hidden;
+}
+.meter[hidden] { display: none !important; }
+.meter span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  transform: scaleX(1);
+  background: linear-gradient(90deg, rgba(226, 184, 106, 0.35), var(--gold));
+  border-radius: inherit;
+}
+.hero.ready .meter span,
+.hero.now .meter span { background: var(--gold); }
+
+body.as-overlay.mode-sheet .meter,
+body.preview-overlay.mode-sheet .meter {
+  width: 100%;
+  height: 16px;
+}
 #hero-skill {
   margin: 6px 0;
   font-size: clamp(56px, 9vw, 112px);

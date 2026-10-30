@@ -131,11 +131,11 @@
   function showOrigin() {
     const node = document.getElementById("origin-url");
     if (location.protocol === "file:") {
-      node.textContent = "http://127.0.0.1:8766/?v=4";
+      node.textContent = "http://127.0.0.1:8766/?v=5";
       return;
     }
     const url = new URL(location.href);
-    url.search = "v=4";
+    url.search = "v=5";
     url.hash = "";
     node.textContent = url.toString();
   }
@@ -1015,6 +1015,16 @@
     requestAnimationFrame(loop);
   }
 
+  function meterScale(casts, focus, now) {
+    let prev = 0;
+    for (let i = 0; i < casts.length; i += 1) {
+      if (casts[i].id === focus.id) break;
+      if (casts[i].time <= focus.time) prev = casts[i].time;
+    }
+    const span = Math.max(focus.time - prev, 1);
+    return Math.max(0, Math.min(1, (focus.time - now) / span));
+  }
+
   function paintSheet() {
     const now = elapsed();
     const casts = L.sortedByTime(state.plan.casts);
@@ -1038,19 +1048,27 @@
     const skill = document.getElementById("hero-skill");
     const note = document.getElementById("hero-note");
     const warn = document.getElementById("hero-warn");
+    const meter = document.getElementById("hero-meter");
+    const fill = document.getElementById("hero-meter-fill");
     if (!focus) {
       kicker.textContent = casts.length ? "這段結束" : "還沒排技能";
       skill.textContent = casts.length ? "沒有下一招" : "先回排軸";
       note.textContent = "";
       warn.textContent = "";
+      meter.hidden = true;
     } else {
       if (now == null) kicker.textContent = "第一招";
       else if (phase === "now") kicker.textContent = "現在";
       else if (phase === "ready") kicker.textContent = "準備";
-      else kicker.textContent = "還有 " + Math.max(0, Math.ceil(focus.time - now)) + " 秒";
+      else kicker.textContent = "";
       skill.textContent = L.skillName(state.plan, focus);
       note.textContent = focus.note || "";
       warn.textContent = issues[focus.id] ? "這次排太早，冷卻還差 " + Math.ceil(issues[focus.id].short) + " 秒" : "";
+      meter.hidden = false;
+      let scale = 1;
+      if (now != null) scale = meterScale(casts, focus, now);
+      if (phase === "now") scale = 1;
+      fill.style.transform = "scaleX(" + scale.toFixed(4) + ")";
     }
     const items = document.querySelectorAll("#sheet-list li");
     items.forEach(function (item) {
