@@ -89,9 +89,6 @@
       persist();
     });
     document.getElementById("import-file").addEventListener("change", onImport);
-    document.getElementById("hero-icon").addEventListener("error", function () {
-      this.hidden = true;
-    });
     document.addEventListener("keydown", onKey);
     window.addEventListener("storage", function (event) {
       if (event.key !== STORAGE || !event.newValue) return;
@@ -103,22 +100,46 @@
   }
 
   function fillJobs() {
-    [jobSelect, sheetJob].forEach(function (select) {
-      let groupName = "";
-      let group = null;
-      Skills.jobs.forEach(function (job) {
-        if (job.group !== groupName) {
-          group = document.createElement("optgroup");
-          group.label = job.group;
-          select.appendChild(group);
-          groupName = job.group;
-        }
-        const option = document.createElement("option");
-        option.value = job.id;
-        option.textContent = job.name;
-        group.appendChild(option);
-      });
+    let groupName = "";
+    let group = null;
+    const menu = document.getElementById("sheet-job-menu");
+    Skills.jobs.forEach(function (job) {
+      if (job.group !== groupName) {
+        group = document.createElement("optgroup");
+        group.label = job.group;
+        jobSelect.appendChild(group);
+        menu.appendChild(el("p", "job-group", job.group));
+        groupName = job.group;
+      }
+      const option = document.createElement("option");
+      option.value = job.id;
+      option.textContent = job.name;
+      group.appendChild(option);
+      menu.appendChild(button("job-choice", job.name, "pick-job", { id: job.id }));
     });
+  }
+
+  function setSheetJob(id) {
+    const job = Skills.byId(id);
+    sheetJob.dataset.job = job ? job.id : "";
+    sheetJob.textContent = job ? job.name : "選職業";
+    document.querySelectorAll("#sheet-job-menu .job-choice").forEach(function (node) {
+      node.classList.toggle("on", node.dataset.id === sheetJob.dataset.job);
+    });
+  }
+
+  function toggleJobMenu() {
+    const menu = document.getElementById("sheet-job-menu");
+    const open = menu.hidden;
+    menu.hidden = !open;
+    sheetJob.setAttribute("aria-expanded", String(open));
+  }
+
+  function closeJobMenu() {
+    const menu = document.getElementById("sheet-job-menu");
+    if (!menu || menu.hidden) return;
+    menu.hidden = true;
+    sheetJob.setAttribute("aria-expanded", "false");
   }
 
   function fillStatic() {
@@ -126,7 +147,7 @@
     leadInput.value = String(state.plan.leadSec);
     if (state.plan.jobId && Skills.byId(state.plan.jobId)) {
       jobSelect.value = state.plan.jobId;
-      sheetJob.value = state.plan.jobId;
+      setSheetJob(state.plan.jobId);
     }
     document.title = state.plan.name ? state.plan.name + " · 排軸小抄" : "排軸小抄";
     updateDemoNote();
@@ -135,11 +156,11 @@
   function showOrigin() {
     const node = document.getElementById("origin-url");
     if (location.protocol === "file:") {
-      node.textContent = "http://127.0.0.1:8766/?v=7";
+      node.textContent = "http://127.0.0.1:8766/?v=8";
       return;
     }
     const url = new URL(location.href);
-    url.search = "v=7";
+    url.search = "v=8";
     url.hash = "";
     node.textContent = url.toString();
   }
@@ -439,6 +460,7 @@
 
   function onClick(event) {
     if (state.suppressClick) return;
+    if (!event.target.closest || !event.target.closest(".job-pick")) closeJobMenu();
     const node = event.target.closest("[data-act]");
     if (!node || node.closest("#timeline")) return;
     const act = node.dataset.act;
@@ -481,6 +503,11 @@
     else if (act === "preview") {
       if (state.preview) endPreview();
       else startPreview();
+    } else if (act === "job-menu") toggleJobMenu();
+    else if (act === "pick-job") {
+      setSheetJob(id);
+      closeJobMenu();
+      loadJobForSheet();
     }
   }
 
@@ -525,8 +552,6 @@
       touch();
     } else if (act === "mit-raid") {
       fillMitRoles();
-    } else if (act === "sheet-job") {
-      loadJobForSheet();
     } else if (act === "mech-name") {
       const mech = state.plan.mechanics.find(function (item) { return item.id === id; });
       if (!mech) return;
@@ -680,7 +705,7 @@
     const job = Skills.byId(jobSelect.value);
     if (!job) return;
     L.applyJob(state.plan, job);
-    sheetJob.value = job.id;
+    setSheetJob(job.id);
     state.armed = null;
     state.pendingDelete = null;
     touch();
@@ -689,7 +714,7 @@
   }
 
   function loadJobForSheet() {
-    const job = Skills.byId(sheetJob.value);
+    const job = Skills.byId(sheetJob.dataset.job);
     if (!job) return;
     const wasDemo = state.plan.demo === true;
     const hadCasts = !wasDemo && state.plan.casts.length > 0;
@@ -1019,14 +1044,27 @@
     requestAnimationFrame(loop);
   }
 
-  function meterScale(casts, focus, now) {
-    let prev = 0;
-    for (let i = 0; i < casts.length; i += 1) {
-      if (casts[i].id === focus.id) break;
-      if (casts[i].time <= focus.time) prev = casts[i].time;
+  function meterScale(focus, now) {
+    const left = focus.time - now;
+    if (left >= 5) return 1;
+    return Math.max(0, left / 5);
+  }
+
+  function queueRows(casts, now) {
+    const active = casts.filter(function (cast) {
+      return now == null || cast.time + L.HOLD_SEC >= now;
+    });
+    let soonCount = 0;
+    if (now != null) {
+      for (let i = 0; i < active.length; i += 1) {
+        if (active[i].time - now <= 5) soonCount += 1;
+        else break;
+      }
     }
-    const span = Math.max(focus.time - prev, 1);
-    return Math.max(0, Math.min(1, (focus.time - now) / span));
+    const total = soonCount > 0 ? soonCount + 2 : Math.min(2, active.length);
+    return active.slice(0, total).map(function (cast, index) {
+      return { cast: cast, big: index < soonCount };
+    });
   }
 
   function paintSheet() {
@@ -1046,48 +1084,26 @@
     updatePreviewButton();
     const focus = now == null ? (casts[0] || null) : L.focusCast(casts, now, lead);
     const phase = now == null ? (focus ? "idle" : "done") : L.phaseOf(focus, now, lead);
+    const rows = queueRows(casts, now);
+    const head = rows.length ? rows[0].cast : focus;
     const hero = document.getElementById("hero");
     const kicker = document.getElementById("hero-kicker");
-    const skill = document.getElementById("hero-skill");
-    const note = document.getElementById("hero-note");
     const warn = document.getElementById("hero-warn");
-    const when = document.getElementById("hero-when");
-    const digit = document.getElementById("hero-digit");
     const meter = document.getElementById("hero-meter");
     const fill = document.getElementById("hero-meter-fill");
-    const left = focus && now != null ? focus.time - now : null;
-    const soon = left != null && left <= 5;
-    hero.className = "hero " + (phase === "idle" ? "wait" : phase) + (focus ? (soon ? " big" : " compact") : "");
-    if (!focus) {
+    hero.className = "hero " + (phase === "idle" ? "wait" : phase);
+    if (!head) {
       kicker.textContent = casts.length ? "這段結束" : "還沒排技能";
-      skill.textContent = casts.length ? "沒有下一招" : "先回排軸";
-      note.textContent = "";
-      when.textContent = "";
       warn.textContent = "";
-      digit.hidden = true;
-      digit.textContent = "";
       meter.hidden = true;
-      paintIcon("");
     } else {
       kicker.textContent = "";
-      const name = L.skillName(state.plan, focus);
-      skill.textContent = name;
-      note.textContent = focus.note || "";
-      when.textContent = L.formatTime(focus.time);
-      warn.textContent = issues[focus.id] ? "這次排太早，冷卻還差 " + Math.ceil(issues[focus.id].short) + " 秒" : "";
-      paintIcon(name);
+      warn.textContent = issues[head.id] ? "這次排太早，冷卻還差 " + Math.ceil(issues[head.id].short) + " 秒" : "";
       meter.hidden = false;
-      let scale = now == null ? 1 : meterScale(casts, focus, now);
+      const scale = now == null ? 1 : meterScale(head, now);
       fill.style.transform = "scaleX(" + scale.toFixed(4) + ")";
-      if (soon) {
-        digit.hidden = false;
-        digit.textContent = String(Math.max(0, Math.ceil(left)));
-      } else {
-        digit.hidden = true;
-        digit.textContent = "";
-      }
     }
-    paintNext(casts, focus);
+    paintQueue(rows, now);
     const items = document.querySelectorAll("#sheet-list li");
     items.forEach(function (item) {
       const cast = casts.find(function (entry) { return entry.id === item.dataset.id; });
@@ -1110,58 +1126,72 @@
     return "/api/mit/icons/" + file;
   }
 
-  function paintIcon(name) {
-    const img = document.getElementById("hero-icon");
-    const file = Skills.iconFor(name);
-    const url = iconUrl(file);
-    if (!url) {
-      img.hidden = true;
-      img.removeAttribute("src");
-      img.dataset.name = "";
-      return;
+  function paintQueue(rows, now) {
+    const key = rows.map(function (row) {
+      const cast = row.cast;
+      return cast.id + (row.big ? "!" : ".") + "@" + L.skillName(state.plan, cast) + "@" + (cast.note || "");
+    }).join("|");
+    if (key !== state.nextKey) {
+      state.nextKey = key;
+      const stack = document.getElementById("hero-stack");
+      const list = document.getElementById("next-two");
+      clear(stack);
+      clear(list);
+      const small = [];
+      rows.forEach(function (row) {
+        if (row.big) stack.appendChild(bigRow(row.cast));
+        else small.push(row.cast);
+      });
+      small.forEach(function (cast) { list.appendChild(smallRow(cast)); });
+      list.hidden = small.length === 0;
     }
-    if (img.dataset.name !== name) {
-      img.dataset.name = name;
-      img.hidden = false;
-      img.src = url;
-    }
+    document.querySelectorAll("#hero-stack .soon-row").forEach(function (row) {
+      const node = row.querySelector(".digit");
+      if (!node || now == null) return;
+      node.textContent = String(Math.max(0, Math.ceil(Number(row.dataset.time) - now)));
+    });
+    document.querySelectorAll("#next-two li").forEach(function (row) {
+      const node = row.querySelector(".t");
+      if (!node) return;
+      const time = Number(row.dataset.time);
+      node.textContent = now == null ? L.formatTime(time) : L.formatTime(Math.max(0, time - now));
+    });
   }
 
-  function paintNext(casts, focus) {
-    const list = document.getElementById("next-two");
-    let key = "";
-    let upcoming = [];
-    if (focus) {
-      const index = casts.findIndex(function (cast) { return cast.id === focus.id; });
-      upcoming = casts.slice(index + 1, index + 3);
-      key = upcoming.map(function (cast) {
-        return cast.id + "@" + cast.time + "@" + L.skillName(state.plan, cast) + "@" + (cast.note || "");
-      }).join("|");
-    }
-    if (key === state.nextKey) return;
-    state.nextKey = key;
-    clear(list);
-    if (!upcoming.length) {
-      list.hidden = true;
-      return;
-    }
-    list.hidden = false;
-    upcoming.forEach(function (cast) {
-      const name = L.skillName(state.plan, cast);
-      const item = el("li", "");
-      const icon = document.createElement("img");
-      icon.alt = "";
-      const file = Skills.iconFor(name);
-      if (file) {
-        icon.src = iconUrl(file);
-        icon.addEventListener("error", function () { icon.remove(); });
-      } else icon.hidden = true;
-      item.appendChild(icon);
-      item.appendChild(el("span", "t", L.formatTime(cast.time)));
-      item.appendChild(el("span", "n", name));
-      if (cast.note) item.appendChild(el("span", "m", cast.note));
-      list.appendChild(item);
-    });
+  function skillIcon(name) {
+    const icon = document.createElement("img");
+    icon.alt = "";
+    const file = Skills.iconFor(name);
+    if (file) {
+      icon.src = iconUrl(file);
+      icon.addEventListener("error", function () { icon.remove(); });
+    } else icon.hidden = true;
+    return icon;
+  }
+
+  function bigRow(cast) {
+    const name = L.skillName(state.plan, cast);
+    const row = el("div", "soon-row");
+    row.dataset.time = String(cast.time);
+    const digit = el("span", "digit", "5");
+    const copy = el("div", "copy");
+    copy.appendChild(el("p", "n", name));
+    if (cast.note) copy.appendChild(el("p", "m", cast.note));
+    row.appendChild(digit);
+    row.appendChild(skillIcon(name));
+    row.appendChild(copy);
+    return row;
+  }
+
+  function smallRow(cast) {
+    const name = L.skillName(state.plan, cast);
+    const item = el("li", "");
+    item.dataset.time = String(cast.time);
+    item.appendChild(skillIcon(name));
+    item.appendChild(el("span", "t", L.formatTime(cast.time)));
+    item.appendChild(el("span", "n", name));
+    if (cast.note) item.appendChild(el("span", "m", cast.note));
+    return item;
   }
 
   function updatePreviewButton() {

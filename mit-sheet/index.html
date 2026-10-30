@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>排軸小抄</title>
-  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body class="mode-plan">
   <header class="top">
@@ -38,7 +38,7 @@
   </div>
   <p id="status" class="status" role="status"></p>
   <p id="demo-note" class="demo-note" hidden>這是示範。表上的時間是按下技能的時間，提醒會再早幾秒。可以改，或按清空這場重排。</p>
-    <p class="help">先點 start.bat。ACT 安裝 OverlayPlugin，新增 Overlay，網址填 <code id="origin-url">http://127.0.0.1:8766/?v=7</code>。舊網址會留著上一版，請改成這一條再按重新載入。金條一直在縮。剩下五秒以內，圖示左邊才出現一位數。再早的話，這一招縮成跟下面一樣。沒有聲音。</p>
+    <p class="help">先點 start.bat。ACT 安裝 OverlayPlugin，新增 Overlay，網址填 <code id="origin-url">http://127.0.0.1:8766/?v=8</code>。舊網址會留著上一版，請改成這一條再按重新載入。職業選單是頁面裡的清單，Overlay 打得開。金條只倒數最後五秒。五秒內的技能都會放大，後面再排兩招，時間是離現在還有多久。沒有聲音。</p>
   <div id="mit-import" class="mit-import" hidden>
     <p>選完檔會先帶進備份裡記住的那一場和你的位置。要換場或換位置，選好再按帶進小抄。機制名稱由本機向 mit.xivtc.com 讀。</p>
     <div class="row">
@@ -100,7 +100,10 @@
   <section id="sheet" class="sheet" hidden>
     <div class="sheet-bar">
       <label class="sheet-job">職業
-        <select id="sheet-job" data-act="sheet-job" aria-label="畫面上的職業"></select>
+        <span class="job-pick">
+          <button type="button" id="sheet-job" data-act="job-menu" aria-haspopup="listbox" aria-expanded="false" aria-label="畫面上的職業">選職業</button>
+          <div id="sheet-job-menu" class="job-menu" hidden role="listbox"></div>
+        </span>
       </label>
       <button type="button" data-act="preview" title="跳到第一招前幾秒，看倒數開始後的畫面。沒有聲音。">預覽倒數</button>
       <p id="clock">--:--</p>
@@ -115,24 +118,16 @@
     <div class="hero wait" id="hero">
       <p id="hero-kicker"></p>
       <div id="hero-meter" class="meter" hidden><span id="hero-meter-fill"></span></div>
-      <div class="hero-line">
-        <span id="hero-digit" hidden></span>
-        <img id="hero-icon" alt="" hidden>
-        <span id="hero-when"></span>
-        <div class="hero-copy">
-          <p id="hero-skill"></p>
-          <p id="hero-note"></p>
-        </div>
-      </div>
+      <div id="hero-stack"></div>
       <p id="hero-warn"></p>
     </div>
     <ol id="next-two" class="next-two" hidden></ol>
     <ol id="sheet-list"></ol>
-    <p class="hint sheet-hint">沒有聲音。金條從滿慢慢變短。剩下五秒，圖示左邊才放大一位數。空白鍵開始或暫停練習，R 重來。接到 ACT 後改跟倒數走。</p>
+    <p class="hint sheet-hint">沒有聲音。金條只在最後五秒縮短。五秒內的技能都會放大，佇列再多兩招，顯示的是相對時間。空白鍵開始或暫停練習，R 重來。</p>
   </section>
 
-  <script src="skills.js?v=7"></script>
-  <script src="logic.js?v=7"></script>
-  <script src="app.js?v=7"></script>
+  <script src="skills.js?v=8"></script>
+  <script src="logic.js?v=8"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

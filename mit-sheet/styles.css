@@ -391,14 +391,41 @@ body.mode-sheet .sheet { margin-top: 16px; }
   color: var(--muted);
   font-size: 14px;
 }
-.sheet-job select { min-width: 128px; }
+.job-pick { position: relative; }
+#sheet-job { min-width: 128px; text-align: left; }
+.job-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 168px;
+  max-height: 240px;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--card-line);
+  border-radius: 12px;
+  background: rgba(20, 16, 12, 0.96);
+  box-shadow: var(--shadow);
+}
+.job-menu[hidden] { display: none !important; }
+.job-group { margin: 8px 8px 2px; color: var(--muted); font-size: 12px; }
+.job-choice {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 6px 8px;
+}
+.job-choice.on { color: var(--gold); }
 .sheet-msg { margin: 0 0 8px; color: var(--gold); line-height: 1.45; }
 .sheet-msg:empty { display: none; }
 #clock { margin: 0; min-width: 72px; font-variant-numeric: tabular-nums; color: var(--gold); font-size: 20px; }
 #act-status { margin: 0; color: var(--muted); }
 
 .hero {
-  min-height: 220px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -444,6 +471,30 @@ body.preview-overlay.mode-sheet .meter {
 }
 
 .hero.compact { min-height: 0; padding: 2px 0 4px; }
+.soon-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0;
+}
+.soon-row .digit {
+  color: var(--gold);
+  font-size: 64px;
+  font-weight: 700;
+  line-height: 0.9;
+  min-width: 0.7em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.soon-row img {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  flex: none;
+  background: rgba(0, 0, 0, 0.28);
+}
+.soon-row .n { margin: 0; font-size: 40px; font-weight: 700; line-height: 1.05; }
+.soon-row .m { margin: 0; color: var(--muted); font-size: 16px; }
 .hero-line {
   display: flex;
   align-items: center;
