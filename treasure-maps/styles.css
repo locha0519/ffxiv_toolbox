@@ -1,0 +1,303 @@
+:root {
+  color-scheme: dark;
+  --bg: #10161a;
+  --panel: #172026;
+  --card: #1f2b32;
+  --line: #33454f;
+  --text: #e8f0f3;
+  --muted: #92a8b3;
+  --accent: #5ec4a8;
+  --accent-dim: #2f6f5e;
+  --warn: #e0b35a;
+  --danger: #d98a7a;
+  --good: #8fd4a0;
+  --shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+  font-family: "Iowan Old Style", "Palatino Linotype", "Noto Serif TC", "Microsoft JhengHei", serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+  background:
+    radial-gradient(900px 420px at 85% -10%, rgba(94, 196, 168, 0.14), transparent 55%),
+    radial-gradient(700px 380px at 0% 20%, rgba(224, 179, 90, 0.08), transparent 50%),
+    linear-gradient(165deg, #0d1418 0%, #142028 48%, #10181d 100%);
+}
+
+.top {
+  display: flex;
+  gap: 28px;
+  align-items: flex-end;
+  padding: 28px 28px 10px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--accent);
+  letter-spacing: 0.14em;
+  font-size: 12px;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+}
+
+h1, h2, h3 { margin: 0; font-weight: 650; }
+
+h1 {
+  font-size: clamp(34px, 5vw, 52px);
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+}
+
+.lede {
+  margin: 0;
+  max-width: 640px;
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 15px;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: center;
+  padding: 8px 28px 4px;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  position: relative;
+  z-index: 30;
+}
+
+.market-pick, .field, .toggle {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+select, input[type="number"] {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.btn, .text-btn, .tab {
+  font: inherit;
+  cursor: pointer;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 14px;
+}
+
+.btn:hover, .tab:hover, .text-btn:hover {
+  border-color: var(--accent-dim);
+}
+
+.btn:disabled { opacity: 0.55; cursor: wait; }
+
+.tab.is-on {
+  background: rgba(94, 196, 168, 0.16);
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 28px 4px;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  position: relative;
+  z-index: 30;
+}
+
+.status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.summary {
+  padding: 12px 28px 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+}
+
+.stat {
+  background: rgba(23, 32, 38, 0.88);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+
+.stat .k {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.stat .v {
+  font-size: 22px;
+  font-family: "Iowan Old Style", "Palatino Linotype", "Noto Serif TC", serif;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+  padding: 16px 28px 40px;
+}
+
+.card {
+  background: rgba(31, 43, 50, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px 16px 14px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-dim);
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.code {
+  font-size: 28px;
+  letter-spacing: 0.04em;
+  font-family: "Iowan Old Style", "Palatino Linotype", "Noto Serif TC", serif;
+  color: var(--accent);
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+.name { font-size: 15px; margin-bottom: 10px; }
+
+.ev {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(16, 22, 26, 0.55);
+}
+
+.ev .net { font-size: 20px; }
+.ev .net.good { color: var(--good); }
+.ev .net.bad { color: var(--danger); }
+.ev .sub { color: var(--muted); font-size: 12px; }
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tag {
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.tag.portal { color: var(--warn); border-color: rgba(224, 179, 90, 0.35); }
+.tag.s { color: var(--accent); border-color: rgba(94, 196, 168, 0.35); }
+
+.detail {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(420px, 92vw);
+  height: 100vh;
+  background: rgba(18, 26, 31, 0.97);
+  border-left: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  overflow: auto;
+  z-index: 40;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+}
+
+.detail-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 35;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.detail h3 {
+  margin: 18px 0 8px;
+  font-size: 15px;
+  color: var(--accent);
+}
+
+.detail p, .detail li {
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 14px;
+}
+
+.detail ul { padding-left: 1.1em; margin: 0; }
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th, .table td {
+  text-align: left;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.table th { color: var(--muted); font-weight: 500; }
+
+.foot {
+  padding: 0 28px 28px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+}
+
+@media (max-width: 720px) {
+  .top { flex-direction: column; align-items: flex-start; padding: 20px 16px 8px; }
+  .toolbar, .tabs, .summary, .board, .foot { padding-left: 16px; padding-right: 16px; }
+  h1 { font-size: 34px; }
+}

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FFXIV Toolbox</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #10141a;
+      --text: #eef3f6;
+      --muted: #9aafbb;
+      --line: #2d3b45;
+      --card: #1a232b;
+      --accent: #5ec4a8;
+      font-family: "Iowan Old Style", "Palatino Linotype", "Noto Serif TC", "Microsoft JhengHei", serif;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(800px 400px at 10% -10%, rgba(94, 196, 168, 0.12), transparent 50%),
+        var(--bg);
+    }
+    main { max-width: 860px; margin: 0 auto; padding: 48px 24px; }
+    .eyebrow { color: var(--accent); letter-spacing: 0.14em; font-size: 12px; margin: 0 0 8px; font-family: "Noto Sans TC", sans-serif; }
+    h1 { font-size: clamp(36px, 6vw, 56px); margin: 0 0 12px; }
+    .lede { color: var(--muted); max-width: 520px; line-height: 1.55; font-family: "Noto Sans TC", sans-serif; }
+    .grid { display: grid; gap: 14px; margin-top: 32px; }
+    a.card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px 22px;
+      transition: border-color 160ms ease, transform 160ms ease;
+    }
+    a.card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    a.card h2 { margin: 0 0 8px; font-size: 24px; }
+    a.card p { margin: 0; color: var(--muted); line-height: 1.5; font-family: "Noto Sans TC", sans-serif; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">FFXIV · 繁中 TC</p>
+    <h1>工具箱</h1>
+    <p class="lede">陸行鳥資料中心向的小工具集合。點進去就能查製作素材樹，或估算挖寶地圖期望值。</p>
+    <div class="grid">
+      <a class="card" href="./craft-tree/">
+        <h2>製作工坊素材樹</h2>
+        <p>成品往右展開到基礎素材，並對照陸行鳥市場板最低掛牌。</p>
+      </a>
+      <a class="card" href="./treasure-maps/">
+        <h2>挖寶地圖獎勵與期望值</h2>
+        <p>整理陳舊的地圖 G#／S#，用抽樣機率與市場價估算開箱與寶庫期望。</p>
+      </a>
+    </div>
+  </main>
+</body>
+</html>
