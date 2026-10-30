@@ -165,7 +165,12 @@ assert.strictEqual(L.isMitBackup(macroPlan), false);
 const choices = L.mitBackupChoices(mitBackup);
 assert.strictEqual(choices.defaultRaid, "m6s");
 assert.strictEqual(choices.defaultRole, "H1");
-assert.strictEqual(choices.raids.find((raid) => raid.id === "m6s").roles.find((role) => role.role === "H1").casts, 3);
+assert.strictEqual(choices.defaultJob, "WHM");
+assert.strictEqual(choices.defaultJobKey, "H1|WHM");
+const m6 = choices.raids.find((raid) => raid.id === "m6s");
+assert.strictEqual(m6.roles.find((role) => role.role === "H1").casts, 3);
+assert.strictEqual(m6.jobs.find((item) => item.job === "WHM" && item.role === "H1").casts, 2);
+assert.strictEqual(m6.jobs.find((item) => item.job === "AST" && item.role === "H1").casts, 1);
 
 const mitPlan = L.mitPlanFromBackup(mitBackup, "m6s", "H1", {
   raid: { id: "m6s", shortName: "M6S", phases: [{ id: "p1", label: "P1" }], defaultPhaseGaps: {} },
@@ -193,6 +198,26 @@ assert.strictEqual(mitPlan.skills[0].name, "節制");
 assert.ok(!mitPlan.casts.some((cast) => cast.skillId === "MNK_00"));
 assert.ok(!mitPlan.casts.some((cast) => cast.skillId === "AST_00"));
 assert.strictEqual(mitPlan.skippedOtherJob, 1);
+
+const astPlan = L.mitPlanFromBackup(mitBackup, "m6s", "H1", {
+  raid: { id: "m6s", shortName: "M6S", phases: [{ id: "p1", label: "P1" }], defaultPhaseGaps: {} },
+  jobLabel: "占星術士",
+  onlyJob: "AST",
+  skills: [
+    { id: "WHM_00", nameTC: "節制", recastSec: 120, durationSec: 20, charges: 1, job: "WHM" },
+    { id: "AST_00", nameTC: "命運之輪", recastSec: 60, durationSec: 18, charges: 1, job: "AST" }
+  ],
+  phases: {
+    p1: { actions: [
+      { idx: 1, timeSec: 32, actionTC: "雙重攻擊" },
+      { idx: 4, timeSec: 70, actionTC: "分散" }
+    ] }
+  }
+});
+assert.strictEqual(astPlan.jobId, "AST");
+assert.strictEqual(astPlan.casts.length, 1);
+assert.strictEqual(astPlan.skills[0].name, "命運之輪");
+assert.strictEqual(astPlan.skippedOtherJob, 2);
 
 const phased = L.mitPlanFromBackup({
   assignments: { fru: { p1: { "PLD_00#0": [0] }, p2: { "PLD_00#0": [0] } } },

@@ -6,6 +6,7 @@
   const Skills = window.MitSkills;
   const STORAGE = "mit-sheet:v1";
   const UIKEY = "mit-sheet:ui";
+  const BACKUP = "mit-sheet:backup";
   const PX = 12;
   const COLORS = ["#e2b86a", "#d7eccf", "#e08b7a", "#9ec3e6", "#d7b8e6", "#f0d2a0", "#c9d6a3"];
 
@@ -37,6 +38,7 @@
   bind();
   fillJobs();
   fillStatic();
+  restoreBackup();
   setMode(state.mode);
   renderAll();
   showOrigin();
@@ -100,22 +102,17 @@
   }
 
   function fillJobs() {
+    const sheetMenu = document.getElementById("sheet-job-menu");
+    const planMenu = document.getElementById("plan-job-menu");
     let groupName = "";
-    let group = null;
-    const menu = document.getElementById("sheet-job-menu");
     Skills.jobs.forEach(function (job) {
       if (job.group !== groupName) {
-        group = document.createElement("optgroup");
-        group.label = job.group;
-        jobSelect.appendChild(group);
-        menu.appendChild(el("p", "job-group", job.group));
+        sheetMenu.appendChild(el("p", "job-group", job.group));
+        planMenu.appendChild(el("p", "job-group", job.group));
         groupName = job.group;
       }
-      const option = document.createElement("option");
-      option.value = job.id;
-      option.textContent = job.name;
-      group.appendChild(option);
-      menu.appendChild(button("job-choice", job.name, "pick-job", { id: job.id }));
+      sheetMenu.appendChild(button("job-choice", job.name, "pick-job", { id: job.id }));
+      planMenu.appendChild(button("job-choice", job.name, "pick-plan-job", { id: job.id }));
     });
   }
 
@@ -128,25 +125,37 @@
     });
   }
 
-  function toggleJobMenu() {
-    const menu = document.getElementById("sheet-job-menu");
-    const open = menu.hidden;
-    menu.hidden = !open;
-    sheetJob.setAttribute("aria-expanded", String(open));
+  function setPlanJob(id) {
+    const job = Skills.byId(id);
+    jobSelect.dataset.job = job ? job.id : "";
+    jobSelect.textContent = job ? job.name : "選職業";
+    document.querySelectorAll("#plan-job-menu .job-choice").forEach(function (node) {
+      node.classList.toggle("on", node.dataset.id === jobSelect.dataset.job);
+    });
   }
 
-  function closeJobMenu() {
-    const menu = document.getElementById("sheet-job-menu");
-    if (!menu || menu.hidden) return;
-    menu.hidden = true;
-    sheetJob.setAttribute("aria-expanded", "false");
+  function closeMenus() {
+    document.querySelectorAll(".job-menu").forEach(function (menu) {
+      menu.hidden = true;
+    });
+    document.querySelectorAll(".job-pick > button").forEach(function (node) {
+      node.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function toggleMenu(trigger, menu) {
+    const willOpen = !!(menu && menu.hidden);
+    closeMenus();
+    if (!willOpen || !menu || !trigger) return;
+    menu.hidden = false;
+    trigger.setAttribute("aria-expanded", "true");
   }
 
   function fillStatic() {
     fightName.value = state.plan.name || "";
     leadInput.value = String(state.plan.leadSec);
     if (state.plan.jobId && Skills.byId(state.plan.jobId)) {
-      jobSelect.value = state.plan.jobId;
+      setPlanJob(state.plan.jobId);
       setSheetJob(state.plan.jobId);
     }
     document.title = state.plan.name ? state.plan.name + " · 排軸小抄" : "排軸小抄";
@@ -156,11 +165,11 @@
   function showOrigin() {
     const node = document.getElementById("origin-url");
     if (location.protocol === "file:") {
-      node.textContent = "http://127.0.0.1:8766/?v=8";
+      node.textContent = "http://127.0.0.1:8766/?v=9";
       return;
     }
     const url = new URL(location.href);
-    url.search = "v=8";
+    url.search = "v=9";
     url.hash = "";
     node.textContent = url.toString();
   }
@@ -460,7 +469,7 @@
 
   function onClick(event) {
     if (state.suppressClick) return;
-    if (!event.target.closest || !event.target.closest(".job-pick")) closeJobMenu();
+    if (!event.target.closest || !event.target.closest(".job-pick")) closeMenus();
     const node = event.target.closest("[data-act]");
     if (!node || node.closest("#timeline")) return;
     const act = node.dataset.act;
@@ -503,11 +512,26 @@
     else if (act === "preview") {
       if (state.preview) endPreview();
       else startPreview();
-    } else if (act === "job-menu") toggleJobMenu();
+    } else if (act === "job-menu") toggleMenu(sheetJob, document.getElementById("sheet-job-menu"));
     else if (act === "pick-job") {
       setSheetJob(id);
-      closeJobMenu();
+      closeMenus();
       loadJobForSheet();
+    } else if (act === "plan-job-menu") toggleMenu(jobSelect, document.getElementById("plan-job-menu"));
+    else if (act === "pick-plan-job") {
+      setPlanJob(id);
+      closeMenus();
+      loadJob();
+    } else if (act === "mit-raid-menu") toggleMenu(document.getElementById("mit-raid"), document.getElementById("mit-raid-menu"));
+    else if (act === "pick-raid") {
+      closeMenus();
+      setMitRaid(id);
+    } else if (act === "mit-job-menu") toggleMenu(document.getElementById("mit-job"), document.getElementById("mit-job-menu"));
+    else if (act === "pick-mit-job") {
+      closeMenus();
+      setMitJob(id);
+    } else if (act === "show-mit") {
+      if (state.mitBackup && state.mitChoices) showMitPicker();
     }
   }
 
@@ -550,8 +574,6 @@
       mech.time = time;
       state.plan.mechanics = L.sortedByTime(state.plan.mechanics);
       touch();
-    } else if (act === "mit-raid") {
-      fillMitRoles();
     } else if (act === "mech-name") {
       const mech = state.plan.mechanics.find(function (item) { return item.id === id; });
       if (!mech) return;
@@ -702,14 +724,18 @@
   }
 
   function loadJob() {
-    const job = Skills.byId(jobSelect.value);
-    if (!job) return;
+    const job = Skills.byId(jobSelect.dataset.job);
+    if (!job) {
+      setStatus("先選職業。");
+      return;
+    }
     L.applyJob(state.plan, job);
+    setPlanJob(job.id);
     setSheetJob(job.id);
     state.armed = null;
     state.pendingDelete = null;
     touch();
-    setStatus("已載入" + job.name + "的技能。");
+    setStatus("已載入" + job.name + "的 " + state.plan.skills.length + " 個技能。");
     setSheetMsg("");
   }
 
@@ -718,7 +744,7 @@
     if (!job) return;
     const wasDemo = state.plan.demo === true;
     const hadCasts = !wasDemo && state.plan.casts.length > 0;
-    jobSelect.value = job.id;
+    setPlanJob(job.id);
     L.applyJob(state.plan, job);
     if (!hadCasts) {
       state.plan.casts = sampleCasts(state.plan.skills);
@@ -820,6 +846,8 @@
         }
         state.mitBackup = raw;
         state.mitChoices = choices;
+        saveBackup();
+        document.getElementById("show-mit").hidden = false;
         showMitPicker();
         importMit();
         return;
@@ -853,52 +881,113 @@
   }
 
   function fillMitRaids() {
-    const select = document.getElementById("mit-raid");
-    const current = select.value || (state.mitChoices && state.mitChoices.defaultRaid) || "";
-    clear(select);
-    (state.mitChoices.raids || []).forEach(function (raid) {
-      const option = document.createElement("option");
-      option.value = raid.id;
+    const trigger = document.getElementById("mit-raid");
+    const menu = document.getElementById("mit-raid-menu");
+    const current = trigger.dataset.raid || (state.mitChoices && state.mitChoices.defaultRaid) || "";
+    clear(menu);
+    const raids = (state.mitChoices && state.mitChoices.raids) || [];
+    raids.forEach(function (raid) {
       const label = (state.mitNames && state.mitNames[raid.id]) || raid.id;
-      option.textContent = label + "（" + raid.casts + "）";
-      select.appendChild(option);
+      menu.appendChild(button("job-choice", label + "（" + raid.casts + "）", "pick-raid", { id: raid.id }));
     });
-    const ids = state.mitChoices.raids.map(function (raid) { return raid.id; });
-    select.value = ids.indexOf(current) >= 0 ? current : state.mitChoices.defaultRaid;
-    fillMitRoles();
+    const ids = raids.map(function (raid) { return raid.id; });
+    const raidId = ids.indexOf(current) >= 0 ? current : ((state.mitChoices && state.mitChoices.defaultRaid) || "");
+    setMitRaid(raidId);
   }
 
-  function fillMitRoles() {
-    const raidId = document.getElementById("mit-raid").value;
-    const raid = (state.mitChoices.raids || []).find(function (item) { return item.id === raidId; });
-    const select = document.getElementById("mit-role");
-    const previous = select.value;
-    clear(select);
-    if (!raid) return;
-    raid.roles.forEach(function (role) {
-      const option = document.createElement("option");
-      option.value = role.role;
-      const known = Skills.byId(role.job);
-      const jobName = known ? known.name : role.job;
-      option.textContent = role.role + (jobName ? " " + jobName : "") + "（" + role.casts + "）";
-      select.appendChild(option);
+  function setMitRaid(raidId) {
+    const trigger = document.getElementById("mit-raid");
+    const raid = ((state.mitChoices && state.mitChoices.raids) || []).find(function (item) { return item.id === raidId; });
+    trigger.dataset.raid = raid ? raid.id : "";
+    const label = raid ? ((state.mitNames && state.mitNames[raid.id]) || raid.id) : "選 boss";
+    trigger.textContent = label;
+    document.querySelectorAll("#mit-raid-menu .job-choice").forEach(function (node) {
+      node.classList.toggle("on", node.dataset.id === trigger.dataset.raid);
     });
-    const roles = raid.roles.map(function (role) { return role.role; });
-    if (roles.indexOf(previous) >= 0) select.value = previous;
-    else if (roles.indexOf(state.mitChoices.defaultRole) >= 0) select.value = state.mitChoices.defaultRole;
-    else select.value = roles[0];
+    fillMitJobs();
+  }
+
+  function fillMitJobs() {
+    const raidId = document.getElementById("mit-raid").dataset.raid;
+    const raid = ((state.mitChoices && state.mitChoices.raids) || []).find(function (item) { return item.id === raidId; });
+    const trigger = document.getElementById("mit-job");
+    const menu = document.getElementById("mit-job-menu");
+    const previous = trigger.dataset.pick || "";
+    clear(menu);
+    const rows = raid ? jobRows(raid) : [];
+    rows.forEach(function (row) {
+      menu.appendChild(button("job-choice", mitJobLabel(row), "pick-mit-job", { id: row.key }));
+    });
+    const keys = rows.map(function (row) { return row.key; });
+    let pick = previous;
+    if (keys.indexOf(pick) < 0) {
+      const prefer = state.mitChoices && state.mitChoices.defaultJobKey;
+      pick = (raidId === (state.mitChoices && state.mitChoices.defaultRaid) && keys.indexOf(prefer) >= 0) ? prefer : (keys[0] || "");
+    }
+    setMitJob(pick);
+  }
+
+  function jobRows(raid) {
+    const source = raid.jobs && raid.jobs.length ? raid.jobs : (raid.roles || []).map(function (role) {
+      return { role: role.role, job: role.job, casts: role.casts };
+    });
+    return source.map(function (row) {
+      return { role: row.role, job: row.job || "", casts: row.casts, key: row.role + "|" + (row.job || "") };
+    });
+  }
+
+  function mitJobLabel(row) {
+    const known = Skills.byId(row.job);
+    const jobName = known ? known.name : (row.job || "未標職業");
+    return jobName + " " + row.role + "（" + row.casts + "）";
+  }
+
+  function setMitJob(key) {
+    const trigger = document.getElementById("mit-job");
+    trigger.dataset.pick = key || "";
+    const parts = String(key || "").split("|");
+    const role = parts[0] || "";
+    const jobId = parts.slice(1).join("|");
+    const known = Skills.byId(jobId);
+    trigger.textContent = key ? ((known ? known.name : (jobId || "未標職業")) + " " + role) : "選職業";
+    document.querySelectorAll("#mit-job-menu .job-choice").forEach(function (node) {
+      node.classList.toggle("on", node.dataset.id === trigger.dataset.pick);
+    });
   }
 
   function cancelMit() {
-    state.mitBackup = null;
     document.getElementById("mit-import").hidden = true;
+  }
+
+  function saveBackup() {
+    if (!state.mitBackup) return;
+    try { localStorage.setItem(BACKUP, JSON.stringify(state.mitBackup)); }
+    catch (error) { /* 備份太大就只留在這次開啟 */ }
+  }
+
+  function restoreBackup() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(BACKUP) || "null");
+      if (!L.isMitBackup(raw)) return;
+      const choices = L.mitBackupChoices(raw);
+      if (!choices.raids.length) return;
+      state.mitBackup = raw;
+      state.mitChoices = choices;
+      document.getElementById("show-mit").hidden = false;
+    } catch (error) { /* 沒有上次的備份 */ }
   }
 
   function importMit() {
     const backup = state.mitBackup;
-    const raidId = document.getElementById("mit-raid").value;
-    const role = document.getElementById("mit-role").value;
-    if (!backup || !raidId || !role) return;
+    const raidId = document.getElementById("mit-raid").dataset.raid;
+    const pick = document.getElementById("mit-job").dataset.pick || "";
+    const parts = pick.split("|");
+    const role = parts[0] || "";
+    const onlyJob = parts.slice(1).join("|");
+    if (!backup || !raidId || !role) {
+      setStatus("先選 boss 和職業。");
+      return;
+    }
     if (location.protocol === "file:") {
       setStatus("請先雙擊 start.bat，用瀏覽器開 http://127.0.0.1:8766/ 再匯入。直接開檔案讀不到機制名稱。", 12000);
       return;
@@ -908,10 +997,9 @@
     setStatus("正在讀時間軸…", 20000);
     loadMitBundle(raidId).then(function (bundle) {
       if (state.mitBackup !== backup) return;
-      const raid = state.mitChoices.raids.find(function (item) { return item.id === raidId; });
-      const roleRow = raid && raid.roles.find(function (item) { return item.role === role; });
-      const known = roleRow && Skills.byId(roleRow.job);
-      bundle.jobLabel = known ? known.name : ((roleRow && roleRow.job) || "");
+      bundle.onlyJob = onlyJob;
+      const known = Skills.byId(onlyJob);
+      bundle.jobLabel = known ? known.name : onlyJob;
       state.plan = L.mitPlanFromBackup(backup, raidId, role, bundle);
       const skipped = state.plan.skippedOtherJob || 0;
       const brought = state.plan.name + "，" + state.plan.casts.length + " 次施放。";

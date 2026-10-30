@@ -544,12 +544,20 @@
     return { skillId: key.slice(0, at), slot: slot };
   }
 
+  function jobCode(skillId) {
+    const text = String(skillId || "");
+    const cut = text.indexOf("_");
+    if (cut <= 0) return "";
+    return text.slice(0, cut);
+  }
+
   function mitBackupChoices(backup) {
     const assignments = (backup && backup.assignments) || {};
     const raids = [];
     Object.keys(assignments).forEach(function (raidId) {
       const phases = assignments[raidId] || {};
       const byRole = {};
+      const byJob = {};
       ROLE_SLOTS.forEach(function (role, slot) {
         byRole[role] = { role: role, slot: slot, casts: 0, job: "" };
       });
@@ -559,7 +567,13 @@
           const parsed = splitInstanceId(key);
           if (!parsed || !byRole[ROLE_SLOTS[parsed.slot]]) return;
           const list = map[key];
-          if (Array.isArray(list)) byRole[ROLE_SLOTS[parsed.slot]].casts += list.length;
+          if (!Array.isArray(list)) return;
+          byRole[ROLE_SLOTS[parsed.slot]].casts += list.length;
+          const code = jobCode(parsed.skillId);
+          if (!code) return;
+          const id = ROLE_SLOTS[parsed.slot] + "|" + code;
+          if (!byJob[id]) byJob[id] = { role: ROLE_SLOTS[parsed.slot], job: code, casts: 0 };
+          byJob[id].casts += list.length;
         });
       });
       const party = (backup.parties && backup.parties[raidId]) || backup.party || [];
@@ -567,11 +581,19 @@
         if (member && byRole[member.role]) byRole[member.role].job = String(member.job || "");
       });
       const roles = ROLE_SLOTS.map(function (role) { return byRole[role]; }).filter(function (item) { return item.casts > 0; });
-      if (!roles.length) return;
+      const jobs = Object.keys(byJob).map(function (id) { return byJob[id]; }).filter(function (item) {
+        return item.casts > 0;
+      });
+      jobs.sort(function (a, b) {
+        if (a.role !== b.role) return ROLE_SLOTS.indexOf(a.role) - ROLE_SLOTS.indexOf(b.role);
+        return b.casts - a.casts;
+      });
+      if (!roles.length && !jobs.length) return;
       raids.push({
         id: raidId,
         casts: roles.reduce(function (sum, item) { return sum + item.casts; }, 0),
-        roles: roles
+        roles: roles,
+        jobs: jobs
       });
     });
     const settings = (backup && backup.settings) || {};
@@ -583,10 +605,19 @@
     if (!raid || !raid.roles.some(function (item) { return item.role === defaultRole; })) {
       defaultRole = raid && raid.roles[0] ? raid.roles[0].role : "";
     }
+    const partyJob = raid && (raid.roles.find(function (item) { return item.role === defaultRole; }) || {}).job;
+    const jobs = (raid && raid.jobs) || [];
+    const picked = jobs.find(function (item) { return item.role === defaultRole && item.job === partyJob; })
+      || jobs.find(function (item) { return item.role === defaultRole; })
+      || jobs[0]
+      || null;
+    if (picked) defaultRole = picked.role;
     return {
       raids: raids,
       defaultRaid: defaultRaid,
       defaultRole: defaultRole,
+      defaultJob: picked ? picked.job : "",
+      defaultJobKey: picked ? picked.role + "|" + picked.job : "",
       leadSec: clampLead(settings.macroLeadSec == null ? 2 : settings.macroLeadSec)
     };
   }
@@ -631,6 +662,7 @@
     if (!raidChoice) throw new Error("這份備份裡沒有這一場");
     const roleChoice = raidChoice.roles.find(function (item) { return item.role === role; });
     if (!roleChoice) throw new Error("這個位置沒有排技能");
+    const onlyJob = (bundle && bundle.onlyJob) || roleChoice.job;
     const raid = bundle.raid || { id: raidId, phases: [] };
     const skillRows = bundle.skills || [];
     const bySkillId = {};
@@ -655,8 +687,8 @@
       Object.keys(assigned).forEach(function (key) {
         const parsed = splitInstanceId(key);
         if (!parsed || parsed.slot !== roleChoice.slot) return;
-        const sourceJob = bySkillId[parsed.skillId] && bySkillId[parsed.skillId].job;
-        if (roleChoice.job && sourceJob && sourceJob !== roleChoice.job) {
+        const sourceJob = (bySkillId[parsed.skillId] && bySkillId[parsed.skillId].job) || jobCode(parsed.skillId);
+        if (onlyJob && sourceJob && sourceJob !== onlyJob) {
           if (Array.isArray(assigned[key])) skippedOtherJob += assigned[key].length;
           return;
         }
@@ -718,7 +750,7 @@
     const plan = normalizePlan({
       name: (shortName + " " + role + (jobLabel ? " " + jobLabel : "")).trim(),
       leadSec: choices.leadSec,
-      jobId: roleChoice.job || "",
+      jobId: onlyJob || roleChoice.job || "",
       skills: skills,
       mechanics: mechanics,
       casts: casts

@@ -255,13 +255,18 @@ textarea { width: 100%; resize: vertical; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: calc(100vh - 210px);
-  overflow: auto;
+  overflow: visible;
 }
 
 .skills-panel .hint, .board .hint { margin: 0; }
 
-#skill-list { display: flex; flex-direction: column; gap: 8px; }
+#skill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(520px, calc(100vh - 460px));
+  overflow: auto;
+}
 
 .skill {
   display: flex;
@@ -419,6 +424,28 @@ body.mode-sheet .sheet { margin-top: 16px; }
   padding: 6px 8px;
 }
 .job-choice.on { color: var(--gold); }
+.skills-panel .job-pick { display: block; }
+#job, #mit-raid, #mit-job, #sheet-job {
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+#job { width: 100%; border-radius: 10px; }
+#job::after, #mit-raid::after, #mit-job::after, #sheet-job::after {
+  content: "▾";
+  color: var(--muted);
+  font-size: 12px;
+}
+.skills-panel .job-menu { width: 100%; box-sizing: border-box; }
+.mit-import label {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+}
+.mit-import .job-pick button { min-width: 180px; }
+.mit-import .job-menu { width: 280px; }
 .sheet-msg { margin: 0 0 8px; color: var(--gold); line-height: 1.45; }
 .sheet-msg:empty { display: none; }
 #clock { margin: 0; min-width: 72px; font-variant-numeric: tabular-nums; color: var(--gold); font-size: 20px; }

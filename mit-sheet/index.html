@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>排軸小抄</title>
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body class="mode-plan">
   <header class="top">
@@ -33,33 +33,43 @@
     <button type="button" data-act="download" data-kind="json">下載排軸</button>
     <button type="button" data-act="download" data-kind="macro" title="會寫進遊戲聊天窗，直播看得到。這頁的倒數不會出聲。">遊戲巨集</button>
     <button type="button" data-act="import" title="小抄 json，或減傷表網站下載的整包備份">匯入</button>
+    <button type="button" id="show-mit" data-act="show-mit" hidden>換軸</button>
     <input id="import-file" type="file" accept="application/json,.json" hidden>
     <button type="button" id="clear-plan" data-act="clear">清空這場</button>
   </div>
   <p id="status" class="status" role="status"></p>
   <p id="demo-note" class="demo-note" hidden>這是示範。表上的時間是按下技能的時間，提醒會再早幾秒。可以改，或按清空這場重排。</p>
-    <p class="help">先點 start.bat。ACT 安裝 OverlayPlugin，新增 Overlay，網址填 <code id="origin-url">http://127.0.0.1:8766/?v=8</code>。舊網址會留著上一版，請改成這一條再按重新載入。職業選單是頁面裡的清單，Overlay 打得開。金條只倒數最後五秒。五秒內的技能都會放大，後面再排兩招，時間是離現在還有多久。沒有聲音。</p>
+    <p class="help">先點 start.bat。ACT 安裝 OverlayPlugin，新增 Overlay，網址填 <code id="origin-url">http://127.0.0.1:8766/?v=9</code>。舊網址會留著上一版，請改成這一條再按重新載入。職業選單是頁面裡的清單，Overlay 打得開。匯入後可以選 boss 和職業，換軸不用重傳檔。金條只倒數最後五秒。五秒內的技能都會放大，後面再排兩招，時間是離現在還有多久。沒有聲音。</p>
   <div id="mit-import" class="mit-import" hidden>
-    <p>選完檔會先帶進備份裡記住的那一場和你的位置。要換場或換位置，選好再按帶進小抄。機制名稱由本機向 mit.xivtc.com 讀。</p>
+    <p>同一份備份可以有同一個 boss 的不同職業。選 boss 和職業，再按帶進小抄。換軸不用重新匯入。</p>
     <div class="row">
-      <label>副本
-        <select id="mit-raid" data-act="mit-raid" aria-label="要帶入的副本"></select>
+      <label>Boss
+        <span class="job-pick">
+          <button type="button" id="mit-raid" data-act="mit-raid-menu" aria-haspopup="listbox" aria-expanded="false">選 boss</button>
+          <div id="mit-raid-menu" class="job-menu" hidden role="listbox"></div>
+        </span>
       </label>
-      <label>位置
-        <select id="mit-role" aria-label="要帶入的位置"></select>
+      <label>職業
+        <span class="job-pick">
+          <button type="button" id="mit-job" data-act="mit-job-menu" aria-haspopup="listbox" aria-expanded="false">選職業</button>
+          <div id="mit-job-menu" class="job-menu" hidden role="listbox"></div>
+        </span>
       </label>
       <button type="button" data-act="mit-go">帶進小抄</button>
-      <button type="button" data-act="mit-cancel">取消</button>
+      <button type="button" data-act="mit-cancel">關閉</button>
     </div>
   </div>
 
   <div id="plan" class="plan">
     <aside class="skills-panel">
       <label class="field">職業
-        <select id="job" aria-label="職業"></select>
+        <span class="job-pick">
+          <button type="button" id="job" data-act="plan-job-menu" aria-haspopup="listbox" aria-expanded="false" aria-label="職業">選職業</button>
+          <div id="plan-job-menu" class="job-menu" hidden role="listbox"></div>
+        </span>
       </label>
       <button type="button" data-act="load-job">載入這個職業的技能</button>
-      <p class="hint">載入會換掉下面的清單。已經排好、而且同名的會留著。每張卡片下面就是這招的施放時間。</p>
+      <p class="hint">點職業，或按下面這個按鈕，就會載入那個職業的技能。已經排好、而且同名的會留著。</p>
       <div id="skill-list"></div>
       <form id="skill-form" class="stack">
         <p class="form-title">自己加一招</p>
@@ -126,8 +136,8 @@
     <p class="hint sheet-hint">沒有聲音。金條只在最後五秒縮短。五秒內的技能都會放大，佇列再多兩招，顯示的是相對時間。空白鍵開始或暫停練習，R 重來。</p>
   </section>
 
-  <script src="skills.js?v=8"></script>
-  <script src="logic.js?v=8"></script>
-  <script src="app.js?v=8"></script>
+  <script src="skills.js?v=9"></script>
+  <script src="logic.js?v=9"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>
