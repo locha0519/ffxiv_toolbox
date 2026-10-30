@@ -7,6 +7,7 @@
   const STORAGE = "mit-sheet:v1";
   const UIKEY = "mit-sheet:ui";
   const BACKUP = "mit-sheet:backup";
+  const LIBRARIES = "mit-sheet:libraries";
   const PX = 12;
   const COLORS = ["#e2b86a", "#d7eccf", "#e08b7a", "#9ec3e6", "#d7b8e6", "#f0d2a0", "#c9d6a3"];
 
@@ -14,7 +15,7 @@
   const state = {
     plan: loadPlan(),
     armed: null,
-    mode: ui.mode === "sheet" ? "sheet" : "plan",
+    mode: "plan",
     group: ui.group === "skill" ? "skill" : "time",
     overlay: false,
     overlayHooked: false,
@@ -27,10 +28,13 @@
     nextKey: "",
     mitBackup: null,
     mitChoices: null,
-    mitNames: {}
+    mitNames: {},
+    libraries: [],
+    libraryId: ""
   };
 
   const fightName = document.getElementById("fight-name");
+  const fightButton = document.getElementById("fight");
   const leadInput = document.getElementById("lead");
   const jobSelect = document.getElementById("job");
   const sheetJob = document.getElementById("sheet-job");
@@ -38,7 +42,7 @@
   bind();
   fillJobs();
   fillStatic();
-  restoreBackup();
+  restoreLibraries();
   setMode(state.mode);
   renderAll();
   showOrigin();
@@ -77,13 +81,15 @@
     document.body.addEventListener("submit", onSubmit);
     document.getElementById("timeline").addEventListener("pointerdown", onPointerDown);
     document.getElementById("timeline").addEventListener("click", onTimelineClick);
-    fightName.addEventListener("input", function () {
-      state.plan.name = fightName.value;
-      state.plan.demo = false;
-      persist();
-      updateDemoNote();
-      document.title = state.plan.name ? state.plan.name + " · 排軸小抄" : "排軸小抄";
-    });
+    if (fightName) {
+      fightName.addEventListener("input", function () {
+        state.plan.name = fightName.value;
+        state.plan.demo = false;
+        persist();
+        updateDemoNote();
+        document.title = state.plan.name ? state.plan.name + " · 排軸小抄" : "排軸小抄";
+      });
+    }
     leadInput.addEventListener("change", function () {
       state.plan.leadSec = L.clampLead(leadInput.value);
       leadInput.value = String(state.plan.leadSec);
@@ -104,16 +110,36 @@
   function fillJobs() {
     const sheetMenu = document.getElementById("sheet-job-menu");
     const planMenu = document.getElementById("plan-job-menu");
-    let groupName = "";
-    Skills.jobs.forEach(function (job) {
-      if (job.group !== groupName) {
-        sheetMenu.appendChild(el("p", "job-group", job.group));
-        planMenu.appendChild(el("p", "job-group", job.group));
-        groupName = job.group;
-      }
-      sheetMenu.appendChild(button("job-choice", job.name, "pick-job", { id: job.id }));
-      planMenu.appendChild(button("job-choice", job.name, "pick-plan-job", { id: job.id }));
-    });
+    clear(sheetMenu);
+    clear(planMenu);
+    const raid = currentRaid();
+    const rows = raid ? jobRows(raid) : [];
+    if (rows.length) {
+      const seen = {};
+      rows.forEach(function (row) {
+        if (seen[row.job]) return;
+        seen[row.job] = true;
+        const known = Skills.byId(row.job);
+        const name = known ? known.name : row.job;
+        sheetMenu.appendChild(button("job-choice", name, "pick-job", { id: row.job }));
+        planMenu.appendChild(button("job-choice", name, "pick-plan-job", { id: row.job }));
+      });
+    } else {
+      let groupName = "";
+      Skills.jobs.forEach(function (job) {
+        if (job.group !== groupName) {
+          sheetMenu.appendChild(el("p", "job-group", job.group));
+          planMenu.appendChild(el("p", "job-group", job.group));
+          groupName = job.group;
+        }
+        sheetMenu.appendChild(button("job-choice", job.name, "pick-job", { id: job.id }));
+        planMenu.appendChild(button("job-choice", job.name, "pick-plan-job", { id: job.id }));
+      });
+    }
+    if (state.plan.jobId) {
+      setPlanJob(state.plan.jobId);
+      setSheetJob(state.plan.jobId);
+    }
   }
 
   function setSheetJob(id) {
@@ -152,7 +178,7 @@
   }
 
   function fillStatic() {
-    fightName.value = state.plan.name || "";
+    setFightLabel();
     leadInput.value = String(state.plan.leadSec);
     if (state.plan.jobId && Skills.byId(state.plan.jobId)) {
       setPlanJob(state.plan.jobId);
@@ -162,8 +188,19 @@
     updateDemoNote();
   }
 
+  function setFightLabel() {
+    if (fightButton) fightButton.textContent = state.plan.name || "選這場";
+    if (fightName) fightName.value = state.plan.name || "";
+    document.title = state.plan.name ? state.plan.name + " · 排軸小抄" : "排軸小抄";
+    const key = axisKey(state.libraryId || state.plan.libraryId, state.plan.raidId, state.plan.role, state.plan.jobId);
+    document.querySelectorAll("#fight-menu .job-choice").forEach(function (node) {
+      node.classList.toggle("on", node.dataset.id === key);
+    });
+  }
+
   function showOrigin() {
     const node = document.getElementById("origin-url");
+    if (!node) return;
     if (location.protocol === "file:") {
       node.textContent = "http://127.0.0.1:8766/?v=10";
       return;
@@ -180,8 +217,10 @@
     document.body.classList.toggle("mode-plan", state.mode === "plan");
     document.getElementById("plan").hidden = state.mode !== "plan";
     document.getElementById("sheet").hidden = state.mode !== "sheet";
-    document.getElementById("mode-plan").setAttribute("aria-pressed", String(state.mode === "plan"));
-    document.getElementById("mode-sheet").setAttribute("aria-pressed", String(state.mode === "sheet"));
+    const planBtn = document.getElementById("mode-plan");
+    const sheetBtn = document.getElementById("mode-sheet");
+    if (planBtn) planBtn.setAttribute("aria-pressed", String(state.mode === "plan"));
+    if (sheetBtn) sheetBtn.setAttribute("aria-pressed", String(state.mode === "sheet"));
     saveUi();
     if (state.mode === "sheet") {
       renderSheetList();
@@ -205,8 +244,10 @@
   }
 
   function updateArmHint() {
+    const node = document.getElementById("arm-hint");
+    if (!node) return;
     const skill = state.plan.skills.find(function (item) { return item.id === state.armed; });
-    document.getElementById("arm-hint").textContent = skill
+    node.textContent = skill
       ? "正在排「" + skill.name + "」。點時間軸、機制，或下面的時間。"
       : "先點左邊的技能，再點時間軸或機制。";
   }
@@ -218,6 +259,7 @@
 
   function renderSkills() {
     const list = document.getElementById("skill-list");
+    if (!list) return;
     clear(list);
     const issues = L.conflicts(state.plan);
     if (!state.plan.skills.length) {
@@ -311,7 +353,7 @@
     list.appendChild(adderForm());
     const issues = L.conflicts(state.plan);
     if (!state.plan.casts.length) {
-      list.appendChild(el("p", "hint", "還沒有施放。點左邊的技能，再點時間軸。"));
+      list.appendChild(el("p", "hint", "這個職業還沒有排技能。"));
       return;
     }
     if (state.group === "skill") {
@@ -425,6 +467,7 @@
 
   function renderMechs() {
     const list = document.getElementById("mech-list");
+    if (!list) return;
     clear(list);
     if (!state.plan.mechanics.length) {
       list.appendChild(el("p", "hint", "沒有機制也沒關係，只排技能時間就夠。"));
@@ -520,9 +563,17 @@
     } else if (act === "plan-job-menu") toggleMenu(jobSelect, document.getElementById("plan-job-menu"));
     else if (act === "pick-plan-job") {
       setPlanJob(id);
+      setSheetJob(id);
       closeMenus();
-      loadJob();
-    } else if (act === "mit-raid-menu") toggleMenu(document.getElementById("mit-raid"), document.getElementById("mit-raid-menu"));
+      loadJobForSheet(false);
+    } else if (act === "fight-menu") toggleMenu(fightButton, document.getElementById("fight-menu"));
+    else if (act === "pick-fight") {
+      closeMenus();
+      pickFight(id);
+    } else if (act === "mit-raid-menu") {
+      const raidButton = document.getElementById("mit-raid");
+      if (raidButton) toggleMenu(raidButton, document.getElementById("mit-raid-menu"));
+    }
     else if (act === "pick-raid") {
       closeMenus();
       setMitRaid(id);
@@ -739,8 +790,9 @@
     setSheetMsg("");
   }
 
-  function loadJobForSheet() {
-    const job = Skills.byId(sheetJob.dataset.job);
+  function loadJobForSheet(keepSheet) {
+    const picked = keepSheet === false ? jobSelect.dataset.job : sheetJob.dataset.job;
+    const job = Skills.byId(picked);
     if (!job) return;
     if (state.mitBackup && state.mitChoices) {
       const axis = axisForJob(job.id);
@@ -753,7 +805,7 @@
       const sameAxis = state.plan.raidId === axis.raidId && state.plan.role === axis.role && state.plan.jobId === axis.job;
       const leftover = (state.plan.casts || []).some(function (cast) { return cast.skillName; });
       if (sameAxis && state.plan.casts.length && !leftover) return;
-      importAxis(axis.raidId, axis.role, axis.job, true);
+      importAxis(axis.raidId, axis.role, axis.job, keepSheet !== false);
       return;
     }
     const wasDemo = state.plan.demo === true;
@@ -770,8 +822,7 @@
     state.armed = null;
     state.pendingDelete = null;
     state.nextKey = "";
-    fightName.value = state.plan.name || "";
-    document.title = state.plan.name ? state.plan.name + " · 排軸小抄" : "排軸小抄";
+    setFightLabel();
     touch();
   }
 
@@ -800,9 +851,15 @@
       if (name.indexOf(String(raid.id).toLowerCase()) >= 0) found = raid.id;
     });
     if (found) return found;
-    const picked = document.getElementById("mit-raid").dataset.raid;
+    const raidButton = document.getElementById("mit-raid");
+    const picked = raidButton ? raidButton.dataset.raid : "";
     if (picked && raids.some(function (raid) { return raid.id === picked; })) return picked;
     return (state.mitChoices && state.mitChoices.defaultRaid) || "";
+  }
+
+  function currentRaid() {
+    const raidId = currentRaidId();
+    return ((state.mitChoices && state.mitChoices.raids) || []).find(function (item) { return item.id === raidId; }) || null;
   }
 
   function axisForJob(jobId) {
@@ -834,8 +891,7 @@
     state.plan.casts = [];
     state.plan.demo = false;
     state.armed = null;
-    fightName.value = "";
-    document.title = "排軸小抄";
+    setFightLabel();
     touch();
   }
 
@@ -895,17 +951,18 @@
       try { raw = JSON.parse(String(reader.result).replace(/^\uFEFF/, "")); }
       catch (error) { setStatus("這個檔案不是排軸檔", 12000); return; }
       if (L.isMitBackup(raw)) {
-        const choices = L.mitBackupChoices(raw);
-        if (!choices.raids.length) {
+        const lib = addLibrary(raw);
+        if (!lib) {
           setStatus("這份備份裡還沒有排好的技能。", 12000);
           return;
         }
-        state.mitBackup = raw;
-        state.mitChoices = choices;
-        saveBackup();
-        document.getElementById("show-mit").hidden = false;
-        showMitPicker();
-        importMit();
+        fillFightMenu();
+        fillJobs();
+        const row = defaultRow(lib);
+        const raid = (lib.choices.raids || []).find(function (item) { return item.id === lib.choices.defaultRaid; }) || lib.choices.raids[0];
+        if (row && raid) importAxis(raid.id, row.role, row.job, false);
+        const menu = document.getElementById("fight-menu");
+        if (fightButton && menu) toggleMenu(fightButton, menu);
         return;
       }
       try {
@@ -1021,6 +1078,125 @@
     catch (error) { /* 備份太大就只留在這次開啟 */ }
   }
 
+  function axisKey(libId, raidId, role, job) {
+    return [libId || "", raidId || "", role || "", job || ""].join("|");
+  }
+
+  function addLibrary(backup) {
+    const choices = L.mitBackupChoices(backup);
+    if (!choices.raids.length) return null;
+    const finger = JSON.stringify(backup.assignments || {});
+    let lib = state.libraries.find(function (item) { return item.finger === finger; });
+    if (!lib) {
+      lib = { id: L.createId(), backup: backup, choices: choices, finger: finger };
+      state.libraries.push(lib);
+    } else {
+      lib.backup = backup;
+      lib.choices = choices;
+    }
+    state.libraryId = lib.id;
+    state.mitBackup = backup;
+    state.mitChoices = choices;
+    saveLibraries();
+    return lib;
+  }
+
+  function saveLibraries() {
+    try {
+      localStorage.setItem(LIBRARIES, JSON.stringify(state.libraries.map(function (lib) {
+        return { id: lib.id, backup: lib.backup };
+      })));
+    } catch (error) { /* 太大就只留在這次開啟 */ }
+  }
+
+  function restoreLibraries() {
+    let rows = [];
+    try { rows = JSON.parse(localStorage.getItem(LIBRARIES) || "[]"); }
+    catch (error) { rows = []; }
+    if (!Array.isArray(rows) || !rows.length) {
+      try {
+        const old = JSON.parse(localStorage.getItem(BACKUP) || "null");
+        if (L.isMitBackup(old)) rows = [{ id: "saved", backup: old }];
+      } catch (error) { rows = []; }
+    }
+    state.libraries = [];
+    (rows || []).forEach(function (item) {
+      if (!item || !L.isMitBackup(item.backup)) return;
+      const choices = L.mitBackupChoices(item.backup);
+      if (!choices.raids.length) return;
+      state.libraries.push({
+        id: item.id || L.createId(),
+        backup: item.backup,
+        choices: choices,
+        finger: JSON.stringify(item.backup.assignments || {})
+      });
+    });
+    const lib = state.libraries.find(function (item) { return item.id === state.plan.libraryId; }) || state.libraries[0];
+    if (lib) {
+      state.libraryId = lib.id;
+      state.mitBackup = lib.backup;
+      state.mitChoices = lib.choices;
+    }
+    fillFightMenu();
+    fillJobs();
+    if (location.protocol !== "file:") {
+      fetchJson(mitUrl("raids.json")).then(function (manifest) {
+        state.mitNames = state.mitNames || {};
+        (manifest.raids || []).forEach(function (raid) {
+          state.mitNames[raid.id] = raid.shortName || raid.name || raid.id;
+        });
+        fillFightMenu();
+      }).catch(function () {});
+    }
+    if ((state.plan.casts || []).some(function (cast) { return cast.skillName; }) && axisForJob(state.plan.jobId)) {
+      const axis = axisForJob(state.plan.jobId);
+      importAxis(axis.raidId, axis.role, axis.job, state.mode === "sheet");
+    }
+  }
+
+  function fillFightMenu() {
+    const menu = document.getElementById("fight-menu");
+    if (!menu) return;
+    clear(menu);
+    if (!state.libraries.length) {
+      menu.appendChild(el("p", "job-group", "先按匯入"));
+      setFightLabel();
+      return;
+    }
+    state.libraries.forEach(function (lib, index) {
+      if (state.libraries.length > 1) menu.appendChild(el("p", "job-group", "備份 " + (index + 1)));
+      (lib.choices.raids || []).forEach(function (raid) {
+        const raidName = (state.mitNames && state.mitNames[raid.id]) || raid.id;
+        jobRows(raid).forEach(function (row) {
+          const known = Skills.byId(row.job);
+          const jobName = known ? known.name : (row.job || "未標職業");
+          menu.appendChild(button("job-choice", raidName + " " + row.role + " " + jobName, "pick-fight", {
+            id: axisKey(lib.id, raid.id, row.role, row.job)
+          }));
+        });
+      });
+    });
+    setFightLabel();
+  }
+
+  function defaultRow(lib) {
+    const choices = lib.choices;
+    const raid = (choices.raids || []).find(function (item) { return item.id === choices.defaultRaid; }) || choices.raids[0];
+    if (!raid) return null;
+    const rows = jobRows(raid);
+    return rows.find(function (row) { return row.key === choices.defaultJobKey; }) || rows[0] || null;
+  }
+
+  function pickFight(key) {
+    const parts = String(key || "").split("|");
+    const lib = state.libraries.find(function (item) { return item.id === parts[0]; });
+    if (!lib) return;
+    state.libraryId = lib.id;
+    state.mitBackup = lib.backup;
+    state.mitChoices = lib.choices;
+    importAxis(parts[1], parts[2], parts.slice(3).join("|"), state.mode === "sheet");
+  }
+
   function restoreBackup() {
     try {
       const raw = JSON.parse(localStorage.getItem(BACKUP) || "null");
@@ -1065,6 +1241,7 @@
       const known = Skills.byId(onlyJob);
       bundle.jobLabel = known ? known.name : onlyJob;
       state.plan = L.mitPlanFromBackup(backup, raidId, role, bundle);
+      state.plan.libraryId = state.libraryId || "";
       const skipped = state.plan.skippedOtherJob || 0;
       const brought = state.plan.name + "，" + state.plan.casts.length + " 次施放。";
       const message = skipped
@@ -1073,6 +1250,7 @@
       state.armed = null;
       state.pendingDelete = null;
       state.nextKey = "";
+      fillJobs();
       persist();
       fillStatic();
       setMode(keepSheet ? "sheet" : "plan");

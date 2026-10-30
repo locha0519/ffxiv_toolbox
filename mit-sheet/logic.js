@@ -152,6 +152,7 @@
       leadSec: clampLead(source.leadSec == null ? 2 : source.leadSec),
       jobId: String(source.jobId || ""),
       raidId: String(source.raidId || "").slice(0, 40),
+      libraryId: String(source.libraryId || "").slice(0, 40),
       role: /^(MT|ST|H[12]|D[1-4])$/.test(source.role) ? source.role : "",
       skills: skills,
       mechanics: sortedByTime(mechanics),

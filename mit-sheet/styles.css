@@ -235,9 +235,7 @@ textarea { width: 100%; resize: vertical; }
 }
 
 .plan {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 16px;
+  display: block;
   padding: 0 20px 28px;
 }
 
@@ -431,8 +429,10 @@ body.mode-sheet .sheet { margin-top: 16px; }
   align-items: center;
   gap: 8px;
 }
-#job { width: 100%; border-radius: 10px; }
-#job::after, #mit-raid::after, #mit-job::after, #sheet-job::after {
+#job, #fight { min-width: 168px; }
+#fight { min-width: 220px; }
+#fight-menu { width: 280px; }
+#job::after, #fight::after, #mit-raid::after, #mit-job::after, #sheet-job::after {
   content: "▾";
   color: var(--muted);
   font-size: 12px;
