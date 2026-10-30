@@ -23,8 +23,13 @@ body {
   color: var(--text);
 }
 
-body.as-overlay.mode-sheet {
+body.as-overlay.mode-sheet,
+body.preview-overlay.mode-sheet {
   background: transparent;
+}
+
+body.preview-overlay.mode-sheet {
+  background: #100e0c;
 }
 
 body.as-overlay.mode-sheet .top,
@@ -32,11 +37,18 @@ body.as-overlay.mode-sheet .toolbar,
 body.as-overlay.mode-sheet .help,
 body.as-overlay.mode-sheet .demo-note,
 body.as-overlay.mode-sheet .status,
-body.as-overlay.mode-sheet .sheet-hint {
+body.as-overlay.mode-sheet .sheet-hint,
+body.preview-overlay.mode-sheet .top,
+body.preview-overlay.mode-sheet .toolbar,
+body.preview-overlay.mode-sheet .help,
+body.preview-overlay.mode-sheet .demo-note,
+body.preview-overlay.mode-sheet .status,
+body.preview-overlay.mode-sheet .sheet-hint {
   display: none;
 }
 
-body.as-overlay.mode-sheet .sheet {
+body.as-overlay.mode-sheet .sheet,
+body.preview-overlay.mode-sheet .sheet {
   background: transparent;
   border: 0;
   box-shadow: none;
@@ -44,8 +56,17 @@ body.as-overlay.mode-sheet .sheet {
 }
 
 body.as-overlay.mode-sheet .sheet li,
-body.as-overlay.mode-sheet .sheet-bar {
+body.as-overlay.mode-sheet .sheet-bar,
+body.preview-overlay.mode-sheet .sheet li,
+body.preview-overlay.mode-sheet .sheet-bar {
   text-shadow: 0 2px 0 #000, 0 0 8px #000;
+}
+
+body.as-overlay.mode-sheet .sheet-bar select,
+body.preview-overlay.mode-sheet .sheet-bar select,
+body.as-overlay.mode-sheet .sheet-bar button,
+body.preview-overlay.mode-sheet .sheet-bar button {
+  text-shadow: none;
 }
 
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -321,6 +342,16 @@ textarea { width: 100%; resize: vertical; }
 body.mode-sheet .sheet { margin-top: 16px; }
 
 .sheet-bar { margin-bottom: 8px; }
+.sheet-job {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+.sheet-job select { min-width: 128px; }
+.sheet-msg { margin: 0 0 8px; color: var(--gold); line-height: 1.45; }
+.sheet-msg:empty { display: none; }
 #clock { margin: 0; min-width: 72px; font-variant-numeric: tabular-nums; color: var(--gold); font-size: 20px; }
 #act-status { margin: 0; color: var(--muted); }
 
@@ -351,7 +382,10 @@ body.mode-sheet .sheet { margin-top: 16px; }
 
 body.as-overlay.mode-sheet #hero-skill,
 body.as-overlay.mode-sheet #hero-kicker,
-body.as-overlay.mode-sheet #hero-note {
+body.as-overlay.mode-sheet #hero-note,
+body.preview-overlay.mode-sheet #hero-skill,
+body.preview-overlay.mode-sheet #hero-kicker,
+body.preview-overlay.mode-sheet #hero-note {
   text-shadow: 0 2px 0 #000, 0 0 12px #000;
 }
 

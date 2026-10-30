@@ -37,7 +37,7 @@
   </div>
   <p id="status" class="status" role="status"></p>
   <p id="demo-note" class="demo-note" hidden>這是示範。表上的時間是按下技能的時間，提醒會再早幾秒。可以改，或按清空這場重排。</p>
-  <p class="help">先點 start.bat。ACT 安裝 OverlayPlugin，新增 Overlay，網址填 <code id="origin-url">http://127.0.0.1:8766/</code>，勾滑鼠穿透。進本倒數後，下一招和倒數會飄在畫面上，沒有聲音。OBS 若是擷取整個螢幕，把這個 Overlay 放在沒被錄到的螢幕，直播就看不到。匯入減傷表備份會直接帶進你那個位置的技能。</p>
+    <p class="help">先點 start.bat。ACT 安裝 OverlayPlugin，新增 Overlay，網址填 <code id="origin-url">http://127.0.0.1:8766/</code>。要選職業或按預覽，先不要勾滑鼠穿透；位置調好再勾。預覽倒數會跳到第一招前幾秒，看起來就跟飄在畫面上一樣，沒有聲音。OBS 若是擷取整個螢幕，把這個 Overlay 放在沒被錄到的螢幕，直播就看不到。匯入減傷表備份會直接帶進你那個位置的技能。</p>
   <div id="mit-import" class="mit-import" hidden>
     <p>選完檔會先帶進備份裡記住的那一場和你的位置。要換場或換位置，選好再按帶進小抄。機制名稱由本機向 mit.xivtc.com 讀。</p>
     <div class="row">
@@ -98,6 +98,10 @@
 
   <section id="sheet" class="sheet" hidden>
     <div class="sheet-bar">
+      <label class="sheet-job">職業
+        <select id="sheet-job" data-act="sheet-job" aria-label="畫面上的職業"></select>
+      </label>
+      <button type="button" data-act="preview" title="跳到第一招前幾秒，看倒數開始後的畫面。沒有聲音。">預覽倒數</button>
       <p id="clock">--:--</p>
       <p id="act-status">尚未開始</p>
       <button type="button" data-act="practice">開始練習</button>
@@ -106,6 +110,7 @@
       <button type="button" data-act="import">匯入</button>
       <button type="button" data-act="mode" data-mode="plan">回排軸</button>
     </div>
+    <p id="sheet-msg" class="sheet-msg"></p>
     <div class="hero wait" id="hero">
       <p id="hero-kicker"></p>
       <p id="hero-skill"></p>
@@ -113,7 +118,7 @@
       <p id="hero-warn"></p>
     </div>
     <ol id="sheet-list"></ol>
-    <p class="hint sheet-hint">沒有聲音。空白鍵開始或暫停練習，R 重來。接到 ACT 後改跟倒數走。</p>
+    <p class="hint sheet-hint">沒有聲音。選職業會換技能清單；這場若已排好，只有同名的會跟著換。預覽倒數看下一招和秒數。空白鍵開始或暫停練習，R 重來。接到 ACT 後改跟倒數走。</p>
   </section>
 
   <script src="skills.js"></script>

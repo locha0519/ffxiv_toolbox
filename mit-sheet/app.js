@@ -17,6 +17,7 @@
     group: ui.group === "skill" ? "skill" : "time",
     overlay: false,
     overlayHooked: false,
+    preview: false,
     suppressClick: false,
     clock: { zeroAt: null, paused: null, source: "idle" },
     lastFocusId: null,
@@ -30,6 +31,7 @@
   const fightName = document.getElementById("fight-name");
   const leadInput = document.getElementById("lead");
   const jobSelect = document.getElementById("job");
+  const sheetJob = document.getElementById("sheet-job");
 
   bind();
   fillJobs();
@@ -97,26 +99,31 @@
   }
 
   function fillJobs() {
-    let groupName = "";
-    let group = null;
-    Skills.jobs.forEach(function (job) {
-      if (job.group !== groupName) {
-        group = document.createElement("optgroup");
-        group.label = job.group;
-        jobSelect.appendChild(group);
-        groupName = job.group;
-      }
-      const option = document.createElement("option");
-      option.value = job.id;
-      option.textContent = job.name;
-      group.appendChild(option);
+    [jobSelect, sheetJob].forEach(function (select) {
+      let groupName = "";
+      let group = null;
+      Skills.jobs.forEach(function (job) {
+        if (job.group !== groupName) {
+          group = document.createElement("optgroup");
+          group.label = job.group;
+          select.appendChild(group);
+          groupName = job.group;
+        }
+        const option = document.createElement("option");
+        option.value = job.id;
+        option.textContent = job.name;
+        group.appendChild(option);
+      });
     });
   }
 
   function fillStatic() {
     fightName.value = state.plan.name || "";
     leadInput.value = String(state.plan.leadSec);
-    if (state.plan.jobId && Skills.byId(state.plan.jobId)) jobSelect.value = state.plan.jobId;
+    if (state.plan.jobId && Skills.byId(state.plan.jobId)) {
+      jobSelect.value = state.plan.jobId;
+      sheetJob.value = state.plan.jobId;
+    }
     document.title = state.plan.name ? state.plan.name + " · 排軸小抄" : "排軸小抄";
     updateDemoNote();
   }
@@ -461,6 +468,10 @@
     else if (act === "practice") startPractice();
     else if (act === "pause") pausePractice();
     else if (act === "reset-clock") resetClock();
+    else if (act === "preview") {
+      if (state.preview) endPreview();
+      else startPreview();
+    }
   }
 
   function onChange(event) {
@@ -504,6 +515,8 @@
       touch();
     } else if (act === "mit-raid") {
       fillMitRoles();
+    } else if (act === "sheet-job") {
+      loadJobForSheet();
     } else if (act === "mech-name") {
       const mech = state.plan.mechanics.find(function (item) { return item.id === id; });
       if (!mech) return;
@@ -657,10 +670,45 @@
     const job = Skills.byId(jobSelect.value);
     if (!job) return;
     L.applyJob(state.plan, job);
+    sheetJob.value = job.id;
     state.armed = null;
     state.pendingDelete = null;
     touch();
     setStatus("已載入" + job.name + "的技能。");
+    setSheetMsg("");
+  }
+
+  function loadJobForSheet() {
+    const job = Skills.byId(sheetJob.value);
+    if (!job) return;
+    const wasDemo = state.plan.demo === true;
+    const hadCasts = !wasDemo && state.plan.casts.length > 0;
+    jobSelect.value = job.id;
+    L.applyJob(state.plan, job);
+    if (!hadCasts) {
+      state.plan.casts = sampleCasts(state.plan.skills);
+      state.plan.mechanics = [];
+      if (wasDemo || !state.plan.name || state.plan.name === "示範") state.plan.name = job.name + " 預覽";
+      setSheetMsg("這段是預覽用的短排軸，不是你的副本。按預覽倒數看下一招和秒數。");
+    } else {
+      setSheetMsg("已換上" + job.name + "的技能清單。這場排好的時間還在，只有同名的會跟著換。");
+    }
+    state.armed = null;
+    state.pendingDelete = null;
+    fightName.value = state.plan.name || "";
+    document.title = state.plan.name ? state.plan.name + " · 排軸小抄" : "排軸小抄";
+    touch();
+  }
+
+  function sampleCasts(skills) {
+    const times = [8, 22, 40, 58];
+    return skills.slice(0, 4).map(function (skill, index) {
+      return { id: L.createId(), time: times[index], skillId: skill.id, note: "" };
+    });
+  }
+
+  function setSheetMsg(text) {
+    document.getElementById("sheet-msg").textContent = text || "";
   }
 
   function clearPlan() {
@@ -893,13 +941,41 @@
 
   function startPractice() {
     if (state.clock.source === "act" && state.clock.zeroAt != null) {
-      setStatus("ACT 正在同步。要自己練，先按重來。");
+      setSheetMsg("ACT 正在同步。要自己練，先按重來。");
       return;
     }
+    state.preview = false;
+    document.body.classList.remove("preview-overlay");
     state.clock = { zeroAt: Date.now(), paused: null, source: "practice" };
     state.lastFocusId = null;
     setMode("sheet");
     ensureTick();
+  }
+
+  function startPreview() {
+    if (state.clock.source === "act" && state.clock.zeroAt != null) {
+      setSheetMsg("ACT 正在同步。要預覽，先按重來。");
+      return;
+    }
+    const casts = L.sortedByTime(state.plan.casts);
+    if (!casts.length) {
+      setSheetMsg("還沒有施放時間。先選上面的職業。");
+      return;
+    }
+    const ahead = Math.max(Number(state.plan.leadSec) + 6, 8);
+    const startAt = casts[0].time - ahead;
+    state.preview = true;
+    if (!state.overlay) document.body.classList.add("preview-overlay");
+    state.clock = { zeroAt: Date.now() - startAt * 1000, paused: null, source: "practice" };
+    state.lastFocusId = null;
+    setMode("sheet");
+    ensureTick();
+  }
+
+  function endPreview() {
+    state.preview = false;
+    document.body.classList.remove("preview-overlay");
+    resetClock();
   }
 
   function pausePractice() {
@@ -915,6 +991,8 @@
   }
 
   function resetClock() {
+    state.preview = false;
+    document.body.classList.remove("preview-overlay");
     state.clock = { zeroAt: null, paused: null, source: "idle" };
     state.lastFocusId = null;
     paintSheet();
@@ -943,8 +1021,9 @@
       actStatus.textContent = state.overlay ? "已接上 ACT，等倒數" : "尚未開始";
     } else {
       clock.textContent = L.formatTime(now);
-      actStatus.textContent = state.clock.source === "act" ? "ACT 同步中" : "練習計時";
+      actStatus.textContent = state.clock.source === "act" ? "ACT 同步中" : (state.preview ? "預覽中" : "練習計時");
     }
+    updatePreviewButton();
     const focus = now == null ? (casts[0] || null) : L.focusCast(casts, now, lead);
     const phase = now == null ? (focus ? "idle" : "done") : L.phaseOf(focus, now, lead);
     const hero = document.getElementById("hero");
@@ -983,7 +1062,15 @@
     }
   }
 
+  function updatePreviewButton() {
+    const button = document.querySelector('[data-act="preview"]');
+    if (!button) return;
+    button.textContent = state.preview ? "結束預覽" : "預覽倒數";
+  }
+
   function adoptActClock(zeroAt) {
+    state.preview = false;
+    document.body.classList.remove("preview-overlay");
     state.clock = { zeroAt: zeroAt, paused: null, source: "act" };
     if (state.mode !== "sheet") setMode("sheet");
     else {
