@@ -44,7 +44,15 @@ html.as-overlay body .demo-note {
 #end-preview[hidden] { display: none !important; }
 body.is-preview #end-preview {
   display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
   margin: 6px;
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
   background: rgba(16, 14, 12, 0.72);
   border: 1px solid var(--gold);
   z-index: 40;

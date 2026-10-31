@@ -208,11 +208,11 @@
     const node = document.getElementById("origin-url");
     if (!node) return;
     if (location.protocol === "file:") {
-      node.textContent = "http://127.0.0.1:8766/?v=15";
+      node.textContent = "http://127.0.0.1:8766/?v=16";
       return;
     }
     const url = new URL(location.href);
-    url.search = "v=15";
+    url.search = "v=16";
     url.hash = "";
     node.textContent = url.toString();
   }
@@ -1577,7 +1577,7 @@
     document.querySelectorAll('[data-act="preview"]').forEach(function (button) {
       if (button.id === "end-preview") {
         button.hidden = !state.preview;
-        button.textContent = "結束預覽";
+        button.textContent = "x";
         return;
       }
       button.textContent = label;
