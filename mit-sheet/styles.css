@@ -154,7 +154,7 @@ body.preview-overlay.mode-sheet .sheet {
   box-shadow: none;
   margin: 6px;
   padding: 4px 8px 6px;
-  width: min(280px, calc(100vw - 12px));
+  width: min(520px, calc(100vw - 12px));
 }
 
 body.as-overlay.playing .sheet-bar {
@@ -578,7 +578,7 @@ body.mode-sheet .sheet { margin-top: 16px; }
 
 .meter {
   position: relative;
-  width: min(280px, 100%);
+  width: min(480px, 100%);
   height: 22px;
   margin: 8px 0 2px;
   border-radius: 999px;
@@ -627,8 +627,9 @@ body.preview-overlay.mode-sheet .meter {
   flex: none;
   background: rgba(0, 0, 0, 0.28);
 }
-.soon-row .n { margin: 0; font-size: 40px; font-weight: 700; line-height: 1.05; }
-.soon-row .m { margin: 0; color: var(--muted); font-size: 16px; }
+.soon-row .copy { min-width: 0; }
+.soon-row .n { margin: 0; font-size: 40px; font-weight: 700; line-height: 1.05; white-space: nowrap; }
+.soon-row .m { margin: 0; color: var(--muted); font-size: 16px; white-space: nowrap; }
 .hero-line {
   display: flex;
   align-items: center;
@@ -704,6 +705,7 @@ body.preview-overlay.mode-sheet .hero.big #hero-digit {
   min-width: 52px;
   font-variant-numeric: tabular-nums;
 }
+.next-two .n, .next-two .m { white-space: nowrap; }
 .next-two .m { color: var(--muted); font-size: 13px; }
 #hero-skill {
   margin: 6px 0;
@@ -775,6 +777,7 @@ ol.next-two li {
 .sheet li.past { opacity: 0.35; }
 .sheet li.current { background: rgba(226, 184, 106, 0.12); border-radius: 10px; }
 .sheet li .t { color: var(--gold); font-variant-numeric: tabular-nums; }
+.sheet li .n, .sheet li .m { white-space: nowrap; }
 .sheet li .m { color: var(--muted); font-size: 16px; }
 .sheet li .bad { color: var(--danger); font-size: 14px; }
 

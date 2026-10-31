@@ -208,11 +208,11 @@
     const node = document.getElementById("origin-url");
     if (!node) return;
     if (location.protocol === "file:") {
-      node.textContent = "http://127.0.0.1:8766/?v=14";
+      node.textContent = "http://127.0.0.1:8766/?v=15";
       return;
     }
     const url = new URL(location.href);
-    url.search = "v=14";
+    url.search = "v=15";
     url.hash = "";
     node.textContent = url.toString();
   }
