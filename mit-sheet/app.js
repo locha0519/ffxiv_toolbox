@@ -21,7 +21,9 @@
     overlayHooked: false,
     overlayView: "idle",
     liveJob: "",
-    liveRaid: "",
+    liveRaid: null,
+    liveName: "",
+    sawCombat: false,
     preview: false,
     suppressClick: false,
     clock: { zeroAt: null, paused: null, source: "idle" },
@@ -49,6 +51,7 @@
   setMode(state.mode);
   renderAll();
   showOrigin();
+  if (looksLikeOverlay()) enterOverlay();
   watchOverlay();
 
   function loadPlan() {
@@ -205,11 +208,11 @@
     const node = document.getElementById("origin-url");
     if (!node) return;
     if (location.protocol === "file:") {
-      node.textContent = "http://127.0.0.1:8766/?v=12";
+      node.textContent = "http://127.0.0.1:8766/?v=13";
       return;
     }
     const url = new URL(location.href);
-    url.search = "v=12";
+    url.search = "v=13";
     url.hash = "";
     node.textContent = url.toString();
   }
@@ -1596,12 +1599,28 @@
     adoptActClock(Date.now());
   }
 
+  function looksLikeOverlay() {
+    const q = String(location.search || "") + String(location.hash || "");
+    if (/OVERLAY_WS|HOST_PORT|OVERLAY/i.test(q)) return true;
+    if (window.OverlayPluginApi) return true;
+    if (typeof window.addOverlayListener === "function") return true;
+    return false;
+  }
+
+  function enterOverlay() {
+    state.overlay = true;
+    document.documentElement.classList.add("as-overlay");
+    document.body.classList.add("as-overlay");
+    if (state.overlayView !== "playing" && state.overlayView !== "menu") setOverlayView("idle");
+  }
+
   function watchOverlay() {
     let tries = 0;
     const timer = setInterval(function () {
       tries += 1;
-      if (hookOverlay() || tries > 20) clearInterval(timer);
-    }, 500);
+      if (looksLikeOverlay()) enterOverlay();
+      if (hookOverlay() || tries > 60) clearInterval(timer);
+    }, 250);
   }
 
   function setOverlayView(view) {
@@ -1614,8 +1633,8 @@
     if (peek) {
       peek.hidden = !state.overlay || next === "playing";
       const job = Skills.byId(state.liveJob);
-      const raid = (state.mitNames && state.mitNames[state.liveRaid]) || state.liveRaid;
-      peek.textContent = next === "menu" ? "收合" : ((raid || job) ? ((raid || "這場") + " " + (job ? job.name : "")).trim() : "小抄");
+      const raid = state.liveRaid ? ((state.mitNames && state.mitNames[state.liveRaid]) || state.liveRaid) : "";
+      peek.textContent = next === "menu" ? "收合" : (raid || (job ? job.name : "小抄"));
     }
     if (next === "playing") setMode("sheet");
     else if (next === "menu") setMode("plan");
@@ -1627,7 +1646,8 @@
     if (!state.plan.casts.length) return false;
     if (state.clock.source !== "act" || state.clock.zeroAt == null) return false;
     if (state.liveJob && state.plan.jobId && state.liveJob !== state.plan.jobId) return false;
-    if (state.plan.raidId && state.liveRaid !== state.plan.raidId) return false;
+    if (state.liveRaid === "") return false;
+    if (state.liveRaid && state.plan.raidId && state.liveRaid !== state.plan.raidId) return false;
     return true;
   }
 
@@ -1684,11 +1704,43 @@
     return texts;
   }
 
+  function listenOverlay(name, fn) {
+    try { window.addOverlayListener(name, fn); }
+    catch (error) { /* 這個 Overlay 版本可能沒有這個事件 */ }
+  }
+
   function hookOverlay() {
     if (state.overlayHooked) return true;
-    if (typeof window.addOverlayListener !== "function" || typeof window.startOverlayEvents !== "function") return false;
+    if (typeof window.addOverlayListener !== "function") return false;
     state.overlayHooked = true;
-    window.addOverlayListener("LogLine", function (data) {
+    enterOverlay();
+    listenOverlay("ChangeZone", function (data) {
+      const raid = L.raidFromZoneId(data && data.zoneID) || L.raidFromZoneName(data && data.zoneName) || "";
+      applyLive("", raid);
+    });
+    listenOverlay("ChangePrimaryPlayer", function (data) {
+      if (data && data.charName) state.liveName = data.charName;
+    });
+    listenOverlay("PartyChanged", function (data) {
+      const party = (data && data.party) || [];
+      let mine = state.liveName ? party.find(function (row) { return row && row.name === state.liveName; }) : null;
+      if (!mine) mine = party.find(function (row) { return row && row.inParty; });
+      if (mine && mine.job != null) applyLive(L.knownJob(String(mine.job)), undefined);
+    });
+    listenOverlay("onPlayerChangedEvent", function (data) {
+      const detail = (data && data.detail) || data || {};
+      const job = L.knownJob(detail.job || detail.jobId || "");
+      if (job) applyLive(job, undefined);
+    });
+    listenOverlay("InCombat", function (data) {
+      if (data && data.inGameCombat) state.sawCombat = true;
+      else if (state.sawCombat && state.clock.source === "act") {
+        state.sawCombat = false;
+        resetClock();
+        if (state.overlayView === "playing") setOverlayView("idle");
+      }
+    });
+    listenOverlay("LogLine", function (data) {
       const texts = logTexts(data);
       let job = "";
       let raid;
@@ -1717,11 +1769,8 @@
       }
       if (engage) syncEngage();
     });
-    try { window.startOverlayEvents(); }
+    try { if (typeof window.startOverlayEvents === "function") window.startOverlayEvents(); }
     catch (error) { /* 監聽已經掛上，就算啟動事件失敗，下一條日誌仍會試。 */ }
-    state.overlay = true;
-    document.body.classList.add("as-overlay");
-    setOverlayView("idle");
     paintSheet();
     return true;
   }

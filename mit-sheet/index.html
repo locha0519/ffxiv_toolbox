@@ -4,10 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>排軸小抄</title>
-  <link rel="stylesheet" href="styles.css?v=12">
+  <link rel="stylesheet" href="styles.css?v=13">
+  <script>
+    (function () {
+      var q = String(location.search || "") + String(location.hash || "");
+      if (/OVERLAY_WS|HOST_PORT|OVERLAY/i.test(q)) document.documentElement.className += " as-overlay";
+    })();
+  </script>
 </head>
 <body class="mode-plan collapsed">
-  <button type="button" id="peek" data-act="toggle-menu" hidden>小抄</button>
+  <button type="button" id="peek" data-act="toggle-menu">小抄</button>
   <header class="top">
     <div class="brand">
       <p class="eyebrow">FFXIV · 繁中</p>
@@ -82,8 +88,8 @@
     <p class="hint sheet-hint">遊戲內職業和 boss 對得上才會展開倒數。對不上就縮小。點小鈕可以匯入或微調排軸。</p>
   </section>
 
-  <script src="skills.js?v=12"></script>
-  <script src="logic.js?v=12"></script>
-  <script src="app.js?v=12"></script>
+  <script src="skills.js?v=13"></script>
+  <script src="logic.js?v=13"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>

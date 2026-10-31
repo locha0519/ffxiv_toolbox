@@ -23,10 +23,22 @@ body {
   color: var(--text);
 }
 
+html.as-overlay,
+html.as-overlay body,
 body.as-overlay,
 body.preview-overlay.mode-sheet {
-  background: transparent;
+  background: transparent !important;
   min-height: 0;
+  overflow: hidden;
+}
+
+html.as-overlay body .top,
+html.as-overlay body .toolbar,
+html.as-overlay body .plan,
+html.as-overlay body .sheet,
+html.as-overlay body .status,
+html.as-overlay body .demo-note {
+  display: none !important;
 }
 
 body.as-overlay .top,
@@ -95,22 +107,49 @@ body.as-overlay.menu .board {
   display: none;
 }
 
+html.as-overlay #peek,
 body.as-overlay.collapsed #peek {
   display: inline-flex;
-  margin: 8px;
-  min-width: 72px;
-  background: rgba(16, 14, 12, 0.62);
-  border: 1px solid rgba(226, 184, 106, 0.55);
+  margin: 6px;
+  min-width: 0;
+  padding: 4px 8px;
+  font-size: 13px;
+  background: rgba(16, 14, 12, 0.55);
+  border: 1px solid rgba(226, 184, 106, 0.5);
 }
+
+body.as-overlay.playing #peek,
+html.as-overlay body.playing #peek {
+  display: none !important;
+}
+
+html.as-overlay body.playing .sheet,
+html.as-overlay body.menu .toolbar,
+html.as-overlay body.menu .plan,
+html.as-overlay body.menu .status,
+html.as-overlay body.menu #peek {
+  display: revert;
+}
+
+html.as-overlay body.playing .sheet { display: block !important; }
+html.as-overlay body.menu .toolbar { display: flex !important; }
+html.as-overlay body.menu .plan,
+html.as-overlay body.menu .status,
+html.as-overlay body.menu #peek { display: block !important; }
+html.as-overlay body.menu #peek { display: inline-flex !important; }
 
 body.as-overlay.mode-sheet .sheet,
 body.preview-overlay.mode-sheet .sheet {
-  background: rgba(16, 14, 12, 0.46);
+  background: rgba(16, 14, 12, 0.42);
   border: 0;
   box-shadow: none;
-  margin: 8px;
-  padding: 8px 12px 10px;
-  width: min(420px, calc(100vw - 16px));
+  margin: 6px;
+  padding: 4px 8px 6px;
+  width: min(280px, calc(100vw - 12px));
+}
+
+body.as-overlay.playing .sheet-bar {
+  display: none !important;
 }
 
 body.as-overlay.mode-sheet #sheet-list,

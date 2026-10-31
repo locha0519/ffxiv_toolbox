@@ -148,6 +148,12 @@ assert.strictEqual(jobPlan.casts[0].skillId, jobPlan.skills[0].id);
 assert.strictEqual(jobPlan.casts[1].skillName, "舊技能");
 
 assert.strictEqual(L.parseCountdown("00|2026-01-01T00:00:00.0000000+08:00|0038||Battle commencing in 9 seconds!"), 9);
+assert.strictEqual(L.parseCountdown("距開戰10秒。"), 10);
+assert.strictEqual(L.parseCountdown("戰鬥開始倒數15"), 15);
+assert.strictEqual(L.parseZoneChange("01|t|04EB|糖彩狂潮"), "m6s");
+assert.strictEqual(L.raidFromZoneId(1259), "m6s");
+assert.strictEqual(L.raidFromZoneId("04E9"), "m5s");
+assert.strictEqual(L.raidFromZoneName("M6S · 糖彩狂潮"), "m6s");
 assert.strictEqual(L.parseJobChange("02|2026-01-01T00:00:00.0000000+08:00|ChangePrimaryPlayer|40000000|Me|WHM"), "WHM");
 assert.strictEqual(L.parseJobChange("02|t|ChangePrimaryPlayer|40000000|Me|24"), "WHM");
 assert.strictEqual(L.parseJobChange("03|t|AddCombatant|10000001|Me|24|"), "WHM");

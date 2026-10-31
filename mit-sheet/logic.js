@@ -777,16 +777,23 @@
     return normalizePlan(raw);
   }
 
-  function parseCountdown(text) {
-    const line = String(text || "");
-    let match = line.match(/Battle commencing in (\d+) seconds/i);
-    if (match) return Number(match[1]);
-    if (!/00:?0038/.test(line) && !/0038/.test(line)) return null;
-    match = line.match(/(\d+)\s*(?:seconds|秒)/i);
+  function takeSeconds(match) {
     if (!match) return null;
     const seconds = Number(match[1]);
     if (!Number.isFinite(seconds) || seconds < 0 || seconds > 60) return null;
     return seconds;
+  }
+
+  function parseCountdown(text) {
+    const line = String(text || "");
+    let found = takeSeconds(line.match(/Battle commencing in (\d+) seconds/i))
+      || takeSeconds(line.match(/距開戰\s*(\d+)\s*秒/))
+      || takeSeconds(line.match(/戰鬥開始倒數[:：]?\s*(\d+)/))
+      || takeSeconds(line.match(/開戰倒數[:：]?\s*(\d+)/))
+      || takeSeconds(line.match(/戦闘開始まで\s*(\d+)\s*秒/));
+    if (found != null) return found;
+    if (!/0038/.test(line)) return null;
+    return takeSeconds(line.match(/(\d+)\s*(?:seconds|秒)/i));
   }
 
   function parseEngage(text) {
@@ -794,7 +801,7 @@
     if (parseCountdown(line) != null) return false;
     if (/Battle commencing!/i.test(line)) return true;
     if (/engages!/i.test(line)) return true;
-    if (/發動攻擊|開始戰鬥/.test(line) && /00:?0039|0039/.test(line)) return true;
+    if (/發動攻擊|開始戰鬥|戰鬥開始(?!倒數)/.test(line)) return true;
     return false;
   }
 
@@ -876,27 +883,50 @@
     return "";
   }
 
+  const ZONE_IDS = {
+    1257: "m5s", 1259: "m6s", 1261: "m7s", 1263: "m8s",
+    1321: "m9s", 1323: "m10s", 1325: "m11s", 1327: "m12s",
+    1238: "fru"
+  };
+
   const RAID_HINTS = [
-    { id: "m8s", names: ["m8s", "savage m8", "m8 savage", "aac cruiserweight m4 (savage)", "輕量級 m4", "輕量級第4層 零式", "cruiserweight m4"] },
-    { id: "m7s", names: ["m7s", "savage m7", "m7 savage", "aac cruiserweight m3 (savage)", "輕量級 m3", "輕量級第3層 零式", "cruiserweight m3"] },
-    { id: "m6s", names: ["m6s", "savage m6", "m6 savage", "aac cruiserweight m2 (savage)", "輕量級 m2", "輕量級第2層 零式", "cruiserweight m2", "sugar riot", "蜜糖暴動"] },
-    { id: "m5s", names: ["m5s", "savage m5", "m5 savage", "aac cruiserweight m1 (savage)", "輕量級 m1", "輕量級第1層 零式", "cruiserweight m1"] },
-    { id: "fru", names: ["fru", "futures rewritten", "the futures rewritten", "絕伊甸", "光暗未來絕境戰", "relic of the future"] }
+    { id: "m12s", names: ["m12s", "林德布魯姆", "aac heavyweight m4"] },
+    { id: "m11s", names: ["m11s", "霸王", "aac heavyweight m3"] },
+    { id: "m10s", names: ["m10s", "深藍", "熾紅", "aac heavyweight m2"] },
+    { id: "m9s", names: ["m9s", "致命美人", "aac heavyweight m1"] },
+    { id: "m8s", names: ["m8s", "呼嘯之劍", "aac cruiserweight m4", "輕量級第4層"] },
+    { id: "m7s", names: ["m7s", "野蠻憎惡", "aac cruiserweight m3", "輕量級第3層"] },
+    { id: "m6s", names: ["m6s", "糖彩狂潮", "蜜糖暴動", "sugar riot", "aac cruiserweight m2", "輕量級第2層"] },
+    { id: "m5s", names: ["m5s", "熱舞綠光", "aac cruiserweight m1", "輕量級第1層"] },
+    { id: "fru", names: ["fru", "futures rewritten", "絕伊甸", "光暗未來"] }
   ];
 
-  function parseZoneChange(text) {
-    const line = String(text || "");
-    let match = line.match(/(?:^|\|)(?:01|ChangeZone)\|([0-9A-Fa-f]+)\|([^|\r\n]*)/);
-    const name = match ? match[2] : "";
-    const blob = (name + " " + line).toLowerCase();
+  function raidFromZoneId(value) {
+    const text = String(value == null ? "" : value).replace(/^0x/i, "").trim();
+    if (!text) return "";
+    const dec = Number(text);
+    if (Number.isFinite(dec) && ZONE_IDS[dec]) return ZONE_IDS[dec];
+    const hex = parseInt(text, 16);
+    return Number.isFinite(hex) && ZONE_IDS[hex] ? ZONE_IDS[hex] : "";
+  }
+
+  function raidFromZoneName(name) {
+    const blob = String(name || "").toLowerCase();
+    if (!blob) return "";
     for (let i = 0; i < RAID_HINTS.length; i += 1) {
       const raid = RAID_HINTS[i];
       for (let j = 0; j < raid.names.length; j += 1) {
         if (blob.indexOf(raid.names[j]) >= 0) return raid.id;
       }
     }
-    if (match) return "";
     return "";
+  }
+
+  function parseZoneChange(text) {
+    const line = String(text || "");
+    const match = line.match(/(?:^|\|)(?:01|ChangeZone)\|([0-9A-Fa-f]+)\|([^|\r\n]*)/);
+    if (match) return raidFromZoneId(match[1]) || raidFromZoneName(match[2]) || "";
+    return raidFromZoneName(line);
   }
 
   function parseWipe(text) {
@@ -950,6 +980,8 @@
     parseEngage: parseEngage,
     parseJobChange: parseJobChange,
     parseZoneChange: parseZoneChange,
+    raidFromZoneId: raidFromZoneId,
+    raidFromZoneName: raidFromZoneName,
     parseWipe: parseWipe,
     knownJob: knownJob,
     safeFile: safeFile,
