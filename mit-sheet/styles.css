@@ -41,6 +41,15 @@ html.as-overlay body .demo-note {
   display: none !important;
 }
 
+#end-preview[hidden] { display: none !important; }
+body.is-preview #end-preview {
+  display: inline-flex !important;
+  margin: 6px;
+  background: rgba(16, 14, 12, 0.72);
+  border: 1px solid var(--gold);
+  z-index: 40;
+}
+
 body.as-overlay .top,
 body.as-overlay .help,
 body.as-overlay .demo-note,

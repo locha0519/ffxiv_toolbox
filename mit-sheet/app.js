@@ -208,11 +208,11 @@
     const node = document.getElementById("origin-url");
     if (!node) return;
     if (location.protocol === "file:") {
-      node.textContent = "http://127.0.0.1:8766/?v=13";
+      node.textContent = "http://127.0.0.1:8766/?v=14";
       return;
     }
     const url = new URL(location.href);
-    url.search = "v=13";
+    url.search = "v=14";
     url.hash = "";
     node.textContent = url.toString();
   }
@@ -571,10 +571,7 @@
     else if (act === "reset-clock") resetClock();
     else if (act === "preview") {
       if (state.preview) endPreview();
-      else {
-        startPreview();
-        if (state.overlay) setOverlayView("playing");
-      }
+      else startPreview();
     } else if (act === "job-menu") toggleMenu(sheetJob, document.getElementById("sheet-job-menu"));
     else if (act === "pick-job") {
       setSheetJob(id);
@@ -1355,7 +1352,7 @@
       return;
     }
     state.preview = false;
-    document.body.classList.remove("preview-overlay");
+    document.body.classList.remove("preview-overlay", "is-preview");
     state.clock = { zeroAt: Date.now(), paused: null, source: "practice" };
     state.lastFocusId = null;
     setMode("sheet");
@@ -1375,17 +1372,23 @@
     const ahead = Math.max(Number(state.plan.leadSec) + 6, 8);
     const startAt = casts[0].time - ahead;
     state.preview = true;
+    document.body.classList.add("is-preview");
     if (!state.overlay) document.body.classList.add("preview-overlay");
+    else setOverlayView("playing");
     state.clock = { zeroAt: Date.now() - startAt * 1000, paused: null, source: "practice" };
     state.lastFocusId = null;
     setMode("sheet");
     ensureTick();
+    updatePreviewButton();
   }
 
   function endPreview() {
     state.preview = false;
-    document.body.classList.remove("preview-overlay");
+    document.body.classList.remove("preview-overlay", "is-preview");
     resetClock();
+    if (state.overlay) setOverlayView("menu");
+    else setMode("plan");
+    updatePreviewButton();
   }
 
   function pausePractice() {
@@ -1402,7 +1405,7 @@
 
   function resetClock() {
     state.preview = false;
-    document.body.classList.remove("preview-overlay");
+    document.body.classList.remove("preview-overlay", "is-preview");
     state.clock = { zeroAt: null, paused: null, source: "idle" };
     state.lastFocusId = null;
     paintSheet();
@@ -1572,13 +1575,18 @@
   function updatePreviewButton() {
     const label = state.preview ? "結束預覽" : "預覽倒數";
     document.querySelectorAll('[data-act="preview"]').forEach(function (button) {
+      if (button.id === "end-preview") {
+        button.hidden = !state.preview;
+        button.textContent = "結束預覽";
+        return;
+      }
       button.textContent = label;
     });
   }
 
   function adoptActClock(zeroAt) {
     state.preview = false;
-    document.body.classList.remove("preview-overlay");
+    document.body.classList.remove("preview-overlay", "is-preview");
     state.clock = { zeroAt: zeroAt, paused: null, source: "act" };
     matchLiveAxis();
     if (shouldPlay()) {
